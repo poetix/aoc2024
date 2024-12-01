@@ -50,6 +50,18 @@ public int sumDifferences() {
 }
 ```
 
+UPDATE: later, this annoyed me so much that I pinched the `ZippingSpliterator` from Protonpack, wrote an integer-optimised version of it, and rewrote the whole thing to:
+
+```java
+public int sumDifferences() {
+    return Streams.zipToInt(
+            left.stream(),
+            right.stream(),
+            (l, r) -> Math.abs(l - r)
+    ).sum();
+}
+```
+
 For part two, it turns out to be fortuitous that we kept a map of counts for each column's numbers. We expand `SortedSequence` to expose this information:
 
 ```java
