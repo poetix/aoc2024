@@ -1,12 +1,16 @@
-# aoc2024
+# Advent of Code 2024
 
-Solutions for AOC2024.
+This repository contains my solutions for the challenges in the [2024 Advent of Code](https://adventofcode.com/2024).
+
+This year I have decided to practice "modern" Java, using newer language features where appropriate.
 
 ## Day 1
 
+We are given numbers in two columns. In part 1, we need to sort the columns independently, then sum the absolute differences between the numbers in the left and right columns.
+
 I decided I wanted to sort list entries as they came in - but Java doesn't have a `SortedList` (because it would break the `List` contract, which says that the *n*th item by insertion order can be retrieved with `get(n)`).
 
-So as a first step I implemented a `SortedSequence` that uses a `TreeMap`, and keeps a count of repeated elements:
+So as a first step I implemented a `SortedSequence` that uses a `TreeMap` to keep unique elements in sorted order in the key-set, and keep a count of repeated elements:
 
 ```java
 public class SortedSequence<T> {
@@ -62,15 +66,20 @@ public int sumDifferences() {
 }
 ```
 
-For part two, it turns out to be fortuitous that we kept a map of counts for each column's numbers. We expand `SortedSequence` to expose this information:
+In part two, we multiply each number in the left column by the number of times that number appears in the right column, and sum the results. Now we need to do some lookups across columns.
+
+It turns out to be fortuitous that we kept a map of counts for each column's numbers. We already have an easy way to answer the question "how many times does number *x* appear in this column?".
+
+We expand `SortedSequence` to expose this information:
 
 ```java
 public int getCount(T index) {
     return counts.getOrDefault(index, 0);
 }
 
-public Stream<Map.Entry<T, Integer>> streamCounts() {
-    return counts.entrySet().stream();
+public Stream<Count<T>> streamCounts() {
+    return counts.entrySet().stream()
+            .map(e -> new Count<>(e.getKey(), e.getValue()));
 }
 ```
 
@@ -78,8 +87,8 @@ and then the solution is easy to come by:
 
 ```java
 public int calculateSimilarity() {
-    return left.streamCounts().mapToInt(entry ->
-            entry.getValue() * entry.getKey() * right.getCount(entry.getKey())
+    return left.streamCounts().mapToInt(count ->
+            count.item() * count.count() * right.getCount(count.item())
     ).sum();
 }
 ```
