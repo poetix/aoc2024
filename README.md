@@ -93,6 +93,6 @@ public int calculateSimilarity() {
 }
 ```
 
-A nice _O(n)_ implementation (given we've paid the _O(log n)_ sorting costs already on insertion).
+A nice _O(n)_ implementation (given we've paid the _O(n log n)_ sorting costs already on insertion).
 
 Sometimes in AOC the thing you do to make life easier in part 1 serendipitously helps you out in part 2, and sometimes it...doesn't.
