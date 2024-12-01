@@ -8,6 +8,8 @@ import java.util.stream.Stream;
 
 public class SortedSequence<T> {
 
+    public record Count<T>(T item, int count) { }
+
     private final Map<T, Integer> counts;
 
     public SortedSequence(Comparator<T> comparator) {
@@ -29,8 +31,8 @@ public class SortedSequence<T> {
         return counts.getOrDefault(index, 0);
     }
 
-    public Stream<Map.Entry<T, Integer>> streamCounts() {
-        return counts.entrySet().stream();
+    public Stream<Count<T>> streamCounts() {
+        return counts.entrySet().stream().map(e -> new Count<>(e.getKey(), e.getValue()));
     }
 
 }

@@ -16,20 +16,12 @@ public class TwinListParser {
     }
 
     public int sumDifferences() {
-        var leftIter = left.stream().iterator();
-        var rightIter = right.stream().iterator();
-        var total = 0;
-
-        while (leftIter.hasNext()) {
-            total += Math.abs((leftIter.next() - rightIter.next()));
-        }
-
-        return total;
+        return Streams.zipToInt(left.stream(), right.stream(), (l, r) -> Math.abs(l - r)).sum();
     }
 
     public int calculateSimilarity() {
-        return left.streamCounts().mapToInt(entry ->
-                entry.getValue() * entry.getKey() * right.getCount(entry.getKey())
+        return left.streamCounts().mapToInt(count ->
+                count.item() * count.count() * right.getCount(count.item())
         ).sum();
     }
 }
