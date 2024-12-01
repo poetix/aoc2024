@@ -23,8 +23,8 @@ public class SortedSequence<T> {
 
     public Stream<T> stream() {
         return counts.entrySet().stream().flatMap(entry ->
-        IntStream.range(0, entry.getValue())
-        .mapToObj(ignored -> entry.getKey())
+            IntStream.range(0, entry.getValue())
+                .mapToObj(ignored -> entry.getKey())
         );
     }
 }
