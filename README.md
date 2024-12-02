@@ -101,12 +101,12 @@ Sometimes in AOC the thing you do to make life easier in part 1 serendipitously 
 
 My first pass at this was quick and dirty, because I had a Leaderboard to climb.
 
-Having got my stars, I set about eliminating intermediate data structures. Each line in the puzzle input represents a series of integers, and we're interested in knowing whether the differences between integers in the series have the following properties:
+Having got my stars, I set about eliminating intermediate data structures. Each line in the puzzle input represents a series of integers, and we're interested in knowing whether the differences between adjacent integers in the series have the following properties:
 
 1. They all have the same sign, either positive or negative.
 2. They are all within the range 1-3 inclusive.
 
-If we have an iterator containing the differences between levels, we can validate this in a single pass:
+An array of integers ("levels") is deemed "safe" if these conditions hold on their deltas. If we have an iterator containing just these deltas, we can validate this in a single pass:
 
 ```java
 private static boolean deltasAreSafe(PrimitiveIterator.OfInt deltas) {
@@ -162,7 +162,7 @@ public boolean isSafe() {
 }
 ```
 
-but we can also generate all the "dampened" delta iterators without doing any array copying:
+In part 2, a sequence of levels is also safe if any subsequence from which a single item has been removed ("dampened") is safe. We can also generate all the "dampened" delta iterators without doing any array copying:
 
 ```java
 public boolean isSafeWithDampening() {
@@ -177,4 +177,4 @@ public boolean isSafeWithDampening() {
 }
 ```
 
-I remain broadly unconvinced that Java's `Stream` API is the right one. Having `map`, `filter`, `reduce`, `collect` etc. defined on iterators would suit almost all the purposes they're actually used for just as well.
+I remain broadly unconvinced that Java's `Stream` API is the right one for general-purpose usage. Having `map`, `filter`, `reduce`, `collect` etc. defined on iterators would suit almost all the tasks they're actually used for just as well. Parallelisation with "spliterators" seems like a special case which should have been designed for separately.
