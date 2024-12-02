@@ -178,3 +178,45 @@ public boolean isSafeWithDampening() {
 ```
 
 I remain broadly unconvinced that Java's `Stream` API is the right one for general-purpose usage. Having `map`, `filter`, `reduce`, `collect` etc. defined on iterators would suit almost all the tasks they're actually used for just as well. Parallelisation with "spliterators" seems like a special case which should have been designed for separately.
+
+One of the things that makes Python especially good for AOC-type puzzles is the availability of a very efficient internal language for building and transforming iterators without creating intermediate collections. For comparison, here's a Python solution making use of generator functions and comprehensions:
+
+```python
+def levels(line):
+  return [int(s) for s in line.split()]
+
+with open("src/test/resources/day2.txt") as file:
+  records = [levels(line) for line in file.readlines()]
+
+def deltas(levels):
+  try:
+    prev = next(levels)
+  except StopIteration:
+    return
+  for item in levels:
+    yield item - prev
+    prev = item
+
+def is_safe(deltas):
+  sgn = 0
+  for delta in deltas:
+    absDelta = abs(delta)
+    if (absDelta < 1 or absDelta > 3):
+      return False
+    newSgn = 1 if delta > 0 else -1
+    if (sgn != 0 and newSgn != sgn):
+      return False
+    sgn = newSgn
+  return True
+
+def dampened(levels, index):
+  return (levels[i] for i in range(len(levels)) if i != index)
+
+def is_safe_with_dampening(levels):
+  if is_safe(deltas(iter(levels))):
+    return True
+  return any(is_safe(deltas(dampened(levels, i))) for i in range(len(levels)))
+
+print(sum(1 for record in records if (is_safe(deltas(iter(record))))))
+print(sum(1 for record in records if (is_safe_with_dampening(record))))
+```
