@@ -9,12 +9,11 @@ public class Day2 {
 
     record Report(int[] levels) {
 
-        private static boolean levelsAreSafe(PrimitiveIterator.OfInt levels) {
-            var iter = deltas(levels);
+        private static boolean deltasAreSafe(PrimitiveIterator.OfInt deltas) {
             var sgn = 0;
 
-            while (iter.hasNext()) {
-                var delta = iter.next();
+            while (deltas.hasNext()) {
+                var delta = deltas.next();
                 var absDelta = Math.abs(delta);
 
                 if (absDelta < 1 || absDelta > 3) return false;
@@ -49,18 +48,18 @@ public class Day2 {
         }
 
         public boolean isSafe() {
-            return levelsAreSafe(Arrays.stream(levels).iterator());
+            return deltasAreSafe(deltas(Arrays.stream(levels).iterator()));
         }
 
         public boolean isSafeWithDampening() {
             return isSafe() ||
                     IntStream.range(0, levels.length)
                             .anyMatch(dropped ->
-                                    levelsAreSafe(
-                                        IntStream.range(0, levels.length)
+                                    deltasAreSafe(
+                                        deltas(IntStream.range(0, levels.length)
                                             .filter(i -> i != dropped)
                                             .map(i -> levels[i])
-                                            .iterator()));
+                                            .iterator())));
         }
     }
 

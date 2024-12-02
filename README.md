@@ -96,3 +96,85 @@ public int calculateSimilarity() {
 A nice _O(n)_ implementation (given we've paid the _O(n log n)_ sorting costs already on insertion).
 
 Sometimes in AOC the thing you do to make life easier in part 1 serendipitously helps you out in part 2, and sometimes it...doesn't.
+
+## Day 2
+
+My first pass at this was quick and dirty, because I had a Leaderboard to climb.
+
+Having got my stars, I set about eliminating intermediate data structures. Each line in the puzzle input represents a series of integers, and we're interested in knowing whether the differences between integers in the series have the following properties:
+
+1. They all have the same sign, either positive or negative.
+2. They are all within the range 1-3 inclusive.
+
+If we have an iterator containing the differences between levels, we can validate this in a single pass:
+
+```java
+private static boolean deltasAreSafe(PrimitiveIterator.OfInt deltas) {
+    var sgn = 0;
+
+    while (deltas.hasNext()) {
+        var delta = deltas.next();
+        var absDelta = Math.abs(delta);
+
+        if (absDelta < 1 || absDelta > 3) return false;
+
+        var newSgn = Integer.compare(0, delta);
+        if (sgn != 0 && newSgn != sgn) return false;
+        sgn = newSgn;
+    }
+
+    return true;
+}
+```
+
+Constructing an iterator of deltas from an iterator of integers is easy enough:
+
+```java
+private static PrimitiveIterator.OfInt deltas(PrimitiveIterator.OfInt levels) {
+    if (!levels.hasNext()) return IntStream.empty().iterator();
+
+    return new PrimitiveIterator.OfInt() {
+        private int previous = levels.next();
+
+        @Override
+        public boolean hasNext() {
+            return levels.hasNext();
+        }
+
+        @Override
+        public int nextInt() {
+            var current = levels.nextInt();
+            var delta = current - previous;
+            previous = current;
+            return delta;
+        }
+    };
+}
+```
+
+You may ask, "why not use Streams here?" and the answer is that streams are awkward when you want to take the first item, then work on the remainder with a value such as `previous` that updates as you go along.
+
+Now we have a simple way to determine whether an `integer` array of levels is safe:
+
+```java
+public boolean isSafe() {
+    return deltasAreSafe(deltas(Arrays.stream(levels).iterator()));
+}
+```
+
+but we can also generate all the "dampened" delta iterators without doing any array copying:
+
+```java
+public boolean isSafeWithDampening() {
+    return isSafe() ||
+            IntStream.range(0, levels.length)
+                    .anyMatch(dropped ->
+                            deltasAreSafe(
+                                deltas(IntStream.range(0, levels.length)
+                                    .filter(i -> i != dropped)
+                                    .map(i -> levels[i])
+                                    .iterator())));
+}
+```
+
+I remain broadly unconvinced that Java's `Stream` API is the right one. Having `map`, `filter`, `reduce`, `collect` etc. defined on iterators would suit almost all the purposes they're actually used for just as well.
