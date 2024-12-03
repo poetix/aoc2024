@@ -220,3 +220,97 @@ def is_safe_with_dampening(levels):
 print(sum(1 for record in records if (is_safe(deltas(iter(record))))))
 print(sum(1 for record in records if (is_safe_with_dampening(record))))
 ```
+
+## Day 3
+
+At last, an opportunity to use [sealed interfaces](https://docs.oracle.com/en/java/javase/17/language/sealed-classes-and-interfaces.html) and [record-matching](https://docs.oracle.com/en/java/javase/23/language/record-patterns.html) inside `switch`.
+
+The task at hand is relatively simple: pick out of a each line everything that looks like either `mul(x, y)`, `do()` or `don't()`, then feed these instructions to a very simple little state machine:
+
+```java
+public final class MultiplierState {
+
+    private boolean enabled = true;
+    private int sum = 0;
+
+    public void interpret(Instruction instruction) {
+        switch (instruction) {
+            case Instruction.Do() -> enabled = true;
+            case Instruction.Dont() -> enabled = false;
+            case Instruction.Mul(int lhs, int rhs) -> {
+                if (enabled) sum += (lhs * rhs);
+            }
+        }
+    }
+
+    public int getSum() {
+        return sum;
+    }
+}
+```
+
+We could have done this the old-fashioned way, by having `MultiplierState` expose `enable()`, `disable()` and `addIfEnabled(int value)` methods, and writing our `Instruction`s like this:
+
+```java
+import com.codepoetics.aoc2024.MultiplierState;
+
+interface Instruction {
+    void apply(MultiplierState state);
+}
+
+record Do() implements Instruction {
+    @Override
+    public void apply(MultiplierState state) {
+        state.enable();
+    }
+}
+
+record Dont() implements Instruction {
+    @Override
+    public void apply(MultiplierState state) {
+        state.disable();
+    }
+}
+
+record Mul(int lhs, int rhs) implements Instruction {
+    @Override
+    public void apply(MultiplierState state) {
+        state.addIfEnabled(lhs * rhs);
+    }
+}
+```
+
+So, which is better? Well, in this case, I like that the `sealed` interface and the `switch`-based interpreter makes `MultiplierState` a black box which accepts instructions and interprets them according to its own internal logic, rather than exposing its mechanisms for external clients to tinker with.
+
+Other than that, the only other thing of note is the [regex](https://docs.oracle.com/javase/8/docs/api/java/util/regex/Pattern.html) with subgroups, which is a handy thing to know how to do:
+
+```java
+Pattern PATTERN = Pattern.compile("mul\\((\\d+),(\\d+)\\)|do\\(\\)|don't\\(\\)");
+
+static Stream<Instruction> parseLine(String line) {
+    var matcher = PATTERN.matcher(line);
+
+    return matcher.results().map(result -> {
+        var token = result.group(0);
+        if (token.startsWith("mul")) {
+            return new Mul(
+                    Integer.parseInt(result.group(1)),
+                    Integer.parseInt(result.group(2)));
+        } else if (token.equals("do()")) {
+            return new Do();
+        } else {
+            return new Dont();
+        }
+    });
+}
+```
+
+By wrapping the digits inside `mul\((\d+),(\d+)\)` in brackets, we identify them as sub-groups which can be pulled out of the match result, e.g.
+
+```
+result.group(0) == "mul(123,456)
+result.group(1) == "123"
+result.group(2) == "456"
+```
+
+That's it for today; if past years are anything to go by, later challenges may involve building more complex state machines with more instruction types, so this is a good pattern to have under one's belt.
