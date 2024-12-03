@@ -338,7 +338,7 @@ interface MultiplierStateVisitor {
 }
 ```
 
-This is a kind of clunky way of dispatching on instruction type, and the general consensus seems to be that [sum types](https://en.wikipedia.org/wiki/Algebraic_data_type) like sealed interfaces make it redundant in most cases.
+Here, the visitor still gets to encapsulate what each instruction type actually does to its internal state, but the mechanics of dispatch feel kind of clunky. The general consensus seems to be that [sum types](https://en.wikipedia.org/wiki/Algebraic_data_type) like sealed interfaces make this approach unnecessary in most cases.
 
 Other than that, the only other thing of note is the [regex](https://docs.oracle.com/javase/8/docs/api/java/util/regex/Pattern.html) with subgroups, which is a handy thing to know how to do:
 
