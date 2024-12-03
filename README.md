@@ -227,6 +227,25 @@ At last, an opportunity to use [sealed interfaces](https://docs.oracle.com/en/ja
 
 The task at hand is relatively simple: pick out of a each line everything that looks like either `mul(x, y)`, `do()` or `don't()`, then feed these instructions to a very simple little state machine:
 
+Here's the sealed interface:
+
+```java
+public sealed interface Instruction permits
+        Instruction.Mul,
+        Instruction.Do,
+        Instruction.Dont {
+    
+    record Mul(int lhs, int rhs) implements Instruction { }
+
+    record Do() implements Instruction { }
+
+    record Dont() implements Instruction { }
+
+}
+```
+
+And here's the state machine:
+
 ```java
 public final class MultiplierState {
 
@@ -281,6 +300,45 @@ record Mul(int lhs, int rhs) implements Instruction {
 ```
 
 So, which is better? Well, in this case, I like that the `sealed` interface and the `switch`-based interpreter makes `MultiplierState` a black box which accepts instructions and interprets them according to its own internal logic, rather than exposing its mechanisms for external clients to tinker with.
+
+I should mention the other classic OOP approach, which is to use the [Visitor Pattern](https://en.wikipedia.org/wiki/Visitor_pattern):
+
+```java
+import com.codepoetics.aoc2024.MultiplierState;
+
+interface Instruction {
+    void accept(MultiplierStateVisitor state);
+}
+
+record Mul(int lhs, int rhs) implements Instruction {
+    @Override
+    public void accept(MultiplierStateVisitor visitor) {
+        state.visit(this);
+    }
+}
+
+record Do() implements Instruction {
+    @Override
+    public void accept(MultiplierStateVisitor visitor) {
+        state.visit(this);
+    }
+}
+
+record Dont() implements Instruction {
+    @Override
+    public void accept(MultiplierStateVisitor visitor) {
+        state.visit(this);
+    }
+}
+
+interface MultiplierStateVisitor {
+    void visit(Mul mulInstr);
+    void visit(Do doInstr);
+    void visit(Dont dontInstr);
+}
+```
+
+This is a kind of clunky way of dispatching on instruction type, and the general consensus seems to be that [sum types](https://en.wikipedia.org/wiki/Algebraic_data_type) like sealed interfaces make it redundant in most cases.
 
 Other than that, the only other thing of note is the [regex](https://docs.oracle.com/javase/8/docs/api/java/util/regex/Pattern.html) with subgroups, which is a handy thing to know how to do:
 
