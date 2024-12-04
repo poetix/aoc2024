@@ -19,7 +19,7 @@ public class Day3 {
     @Test
     public void part2() {
         MultiplierState state = new MultiplierState();
-        
+
         ResourceReader.of("/day3.txt").readLines()
                 .flatMap(Instruction::parseLine)
                 .forEach(state::interpret);

@@ -13,22 +13,18 @@ public sealed interface Instruction permits
     static Stream<Instruction> parseLine(String line) {
         var matcher = PATTERN.matcher(line);
 
-        Stream.Builder<Instruction> found = Stream.builder();
-
-        while (matcher.find()) {
-            var token = matcher.group(0);
+        return matcher.results().map(result -> {
+            var token = result.group(0);
             if (token.startsWith("mul")) {
-                found.add(new Mul(
-                        Integer.parseInt(matcher.group(1)),
-                        Integer.parseInt(matcher.group(2))));
+                return new Mul(
+                        Integer.parseInt(result.group(1)),
+                        Integer.parseInt(result.group(2)));
             } else if (token.equals("do()")) {
-                found.add(new Do());
+                return new Do();
             } else {
-                found.add(new Dont());
+                return new Dont();
             }
-        }
-
-        return found.build();
+        });
     }
 
     record Mul(int lhs, int rhs) implements Instruction { }

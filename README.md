@@ -372,3 +372,55 @@ result.group(2) == "456"
 ```
 
 That's it for today; if past years are anything to go by, later challenges may involve building more complex state machines with more instruction types, so this is a good pattern to have under one's belt.
+
+## Day 4
+
+Hello to the first Grid question of the season. Anticipating some of the things you typically have to do with these, I implemented a couple of utility classes, `Point`, `Direction`, `SparseGrid` and `DenseGrid`.
+
+A `DenseGrid<T>` represents a grid's contents with a nested array, while a `SparseGrid<T>` uses a map of `Point`s to `T`s. I wrote and used `SparseGrid` first, wanting to be lazy about bounds-checking, then realised I could implement a dense grid with the same contract and use that instead.
+
+Anyway, there's not much to say about this one really. We look for a string starting at a given `Point` and seeking in a given `Direction` like this:
+
+```java
+private boolean seek(String s, Point position, Direction direction) {
+    Point cursor = position;
+    for (char c : s.toCharArray()) {
+        Character charAt = grid.get(cursor);
+        if (charAt == null || c != charAt) return false;
+        cursor = direction.addTo(cursor);
+    }
+    return true;
+}
+```
+
+Once you have that, counting "XMAS"-es is trivial:
+
+```java
+private long countXmasesAt(Point position) {
+    return Arrays.stream(Direction.values())
+            .filter(direction -> seek("XMAS", position, direction))
+            .count();
+}
+
+public long countXmases() {
+    return grid.populatedPositions().mapToLong(this::countXmasesAt).sum();
+}
+```
+
+and counting "X-MAS"-es is not much less trivial:
+
+```java
+public boolean hasCrossAt(Point position) {
+    return Arrays.stream(Direction.DIAGONALS)
+            .filter(diagonal ->
+                    seek("MAS", diagonal.addTo(position), diagonal.inverse()))
+            .count() == 2;
+}
+
+public long countCrosses() {
+    return grid.populatedSquares()
+            .filter(entry -> entry.contents() == 'A'
+                    && hasCrossAt(entry.position()))
+            .count();
+}
+```
