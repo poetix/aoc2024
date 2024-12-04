@@ -413,7 +413,7 @@ and counting "X-MAS"-es is not much less trivial:
 import com.codepoetics.aoc2024.Direction;
 
 public boolean hasCrossAt(Point position) {
-    return Stream.of(Direction.NORTHEAST, Direction. NORTHWEST)
+    return Stream.of(Direction.NORTHEAST, Direction.NORTHWEST)
             .allMatch(diagonal ->
                     seek("MAS", diagonal.addTo(position), diagonal.inverse())) ||
                     seek("MAS", diagonal.inverse().addTo(position), diagonal);

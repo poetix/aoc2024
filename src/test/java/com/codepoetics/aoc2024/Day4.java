@@ -31,7 +31,7 @@ public class Day4 {
         }
 
         public boolean hasCrossAt(Point position) {
-            return Stream.of(Direction.NORTHEAST, Direction. NORTHWEST)
+            return Stream.of(Direction.NORTHEAST, Direction.NORTHWEST)
                     .allMatch(diagonal ->
                             seek("MAS", diagonal.addTo(position), diagonal.inverse())
                             || seek("MAS", diagonal.inverse().addTo(position), diagonal));
