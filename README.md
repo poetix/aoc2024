@@ -410,11 +410,13 @@ public long countXmases() {
 and counting "X-MAS"-es is not much less trivial:
 
 ```java
+import com.codepoetics.aoc2024.Direction;
+
 public boolean hasCrossAt(Point position) {
-    return Arrays.stream(Direction.DIAGONALS)
-            .filter(diagonal ->
-                    seek("MAS", diagonal.addTo(position), diagonal.inverse()))
-            .count() == 2;
+    return Stream.of(Direction.NORTHEAST, Direction. NORTHWEST)
+            .allMatch(diagonal ->
+                    seek("MAS", diagonal.addTo(position), diagonal.inverse())) ||
+                    seek("MAS", diagonal.inverse().addTo(position), diagonal);
 }
 
 public long countCrosses() {

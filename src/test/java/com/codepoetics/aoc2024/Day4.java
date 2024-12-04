@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.function.Function;
+import java.util.stream.Stream;
 
 public class Day4 {
 
@@ -30,10 +31,10 @@ public class Day4 {
         }
 
         public boolean hasCrossAt(Point position) {
-            return Arrays.stream(Direction.DIAGONALS)
-                    .filter(diagonal ->
-                            seek("MAS", diagonal.addTo(position), diagonal.inverse()))
-                    .count() == 2;
+            return Stream.of(Direction.NORTHEAST, Direction. NORTHWEST)
+                    .allMatch(diagonal ->
+                            seek("MAS", diagonal.addTo(position), diagonal.inverse())
+                            || seek("MAS", diagonal.inverse().addTo(position), diagonal));
         }
 
         public long countCrosses() {
