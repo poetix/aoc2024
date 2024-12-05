@@ -152,7 +152,7 @@ private static PrimitiveIterator.OfInt deltas(PrimitiveIterator.OfInt levels) {
 }
 ```
 
-You may ask, "why not use Streams here?" and the answer is that streams are awkward when you want to take the first item, then work on the remainder with a value such as `previous` that updates as you go along.
+You may ask, "why not use Streams here?" and the answer is that streams are awkward when you want to take the first item, then work on the remainder with a value such as `previous` that pageLists as you go along.
 
 Now we have a simple way to determine whether an `integer` array of levels is safe:
 
@@ -426,3 +426,99 @@ public long countCrosses() {
             .count();
 }
 ```
+
+## Day 5
+
+Today's puzzle is about ordering page numbers given a set of dependencies (page X must come before page Y). This resembles an interview question I used to set (order a collection of build dependencies into a build order), but is actually simpler to solve than that, as every set of pages has only one valid order.
+
+The trick is to organise the dependencies into a lookup: for each page number, what set of pages must come before that page? Here's how we do that:
+
+```java
+public static class Ordering {
+
+    private final Map<Integer, Set<Integer>> previousByNext = new HashMap<>();
+
+    public void add(int prev, int next) {
+        previousByNext.compute(next, (ignored, previous) -> {
+            var result = previous == null ? new HashSet<Integer>() : previous;
+            result.add(prev);
+            return result;
+        });
+    }
+}
+```
+
+In solving part one, I initially scanned each list of pages, checking for each page number that the preceding page numbers in the list satisfied these constraints. But once you have part two, you can use it to solve part one, so let's pretend we knew that all along.
+
+For part two, we need to reorder invalid lists of pages. Is this a graph traversal problem? No, it's a sort. First, we need `Ordering` to tell us how _many_ of the pages in a given list are required to be previous to a given page:
+
+```java
+public long countPreviousIn(int page, Set<Integer> pages) {
+    var previous = previousByNext.get(page);
+    return previous == null ? 0 : previous.stream()
+            .filter(pages::contains)
+            .count();
+}
+```
+
+Then we use that to sort the pages in our list:
+
+```java
+public PageList reorder(Ordering ordering) {
+   var unorderedPages = Arrays.stream(pages).boxed().collect(Collectors.toSet());
+
+   Comparator<Integer> byNumberOfPreviousPages = Comparator.comparing(page ->
+           ordering.countPreviousIn(page, unorderedPages)
+   );
+
+   return new PageList(unorderedPages.stream()
+           .sorted(byNumberOfPreviousPages)
+           .mapToInt(Integer::valueOf)
+           .toArray());
+}
+```
+
+The reasoning here is that because the page-order dependencies determine a single correct ordering, the first page will have no pages in the list that must come before it, the second will have one, the third will have two, and so on.
+
+Now we can retroactively figure out which lists of pages are in the right order and which aren't, with a simple equality test between the ordered and unordered page sets:
+
+```java
+private boolean isValid(Update pageList) {
+    return pageList.equals(pageList.reorder(ordering));
+}
+```
+
+We just need to equip `PageList` with a working `equals` method (Java isn't clever enough to notice when an array-typed field will break the one it generates for `record`s), and extract the middle values so we can add them up to get our puzzle answers:
+
+```java
+ @Override
+public boolean equals(Object other) {
+    return other instanceof PageList &&
+            Arrays.equals(pages, ((PageList) other).pages);
+}
+
+public int middleValue() {
+    return pages[pages.length / 2];
+}
+```
+
+and then it's the usual map/filter/sum:
+
+```java
+public long validUpdatesSum() {
+    return pageLists.stream()
+            .filter(this::isValid)
+            .mapToInt(PageList::middleValue)
+            .sum();
+}
+
+public long reorderedUpdatesSum() {
+    return pageLists.stream()
+            .filter(pageList -> !isValid(pageList))
+            .map(pageList -> pageList.reorder(ordering()))
+            .mapToInt(PageList::middleValue)
+            .sum();
+}
+```
+
+Did I start out by writing the graph traversal algorithm from my interview question, then realise I was being silly and throw it away again? I did. But actually it gave me a useful intuition, which was to build the initial lookup map. Only the traversal itself turned out to be unnecessary.
