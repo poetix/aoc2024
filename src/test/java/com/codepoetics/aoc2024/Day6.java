@@ -46,7 +46,7 @@ public class Day6 {
             return inGrid(p) && grid.get(p) != null;
         }
 
-        private boolean endsInLoop(Point obstacle) {
+        private boolean endsInLoop(Point newObstacle) {
             Set<PathStep> visited = new HashSet<>();
 
             Point position = initialGuardPosition;
@@ -58,7 +58,7 @@ public class Day6 {
                 visited.add(step);
 
                 var nextPosition = direction.addTo(position);
-                while (hasObstacle(nextPosition) || nextPosition.equals(obstacle)) {
+                while (hasObstacle(nextPosition) || nextPosition.equals(newObstacle)) {
                     direction = direction.rotate90Right();
                     nextPosition = direction.addTo(position);
                 }
@@ -69,14 +69,14 @@ public class Day6 {
             return false;
         }
 
-        private boolean endsInLoop(Set<PathStep> knownPath, PathStep currentStep, Point obstacle) {
+        private boolean endsInLoop(Set<PathStep> knownPath, PathStep currentStep, Point newObstacle) {
             Set<PathStep> newSteps = new HashSet<>();
 
             while (inGrid(currentStep.position()) ) {
                 Direction nextDirection = currentStep.direction();
                 Point nextPosition = nextDirection.addTo(currentStep.position());
 
-                while (hasObstacle(nextPosition) || obstacle.equals(nextPosition)) {
+                while (hasObstacle(nextPosition) || newObstacle.equals(nextPosition)) {
                     nextDirection = nextDirection.rotate90Right();
                     nextPosition = nextDirection.addTo(currentStep.position());
                 }

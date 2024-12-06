@@ -563,7 +563,7 @@ To reach a naive solution we just need to try placing an obstacle at every posit
 ```java
 record PathStep(Point position, Direction direction) {}
 
-private boolean endsInLoop(Point obstacle) {
+private boolean endsInLoop(Point newObstacle) {
     Set<PathStep> visited = new HashSet<>();
 
     Point position = initialGuardPosition;
@@ -575,7 +575,7 @@ private boolean endsInLoop(Point obstacle) {
         visited.add(step);
 
         var nextPosition = direction.addTo(position);
-        while (hasObstacle(nextPosition) || nextPosition.equals(obstacle)) {
+        while (hasObstacle(nextPosition) || nextPosition.equals(newObstacle)) {
             direction = direction.rotate90Right();
             nextPosition = direction.addTo(position);
         }
@@ -600,14 +600,14 @@ Can we do a little better than that, in terms of efficiency? Well, yes, but here
 The basic idea is that as we run through the path placing obstacles, we are already building up some of the set of path steps that the guard will have taken before reaching each obstacle we try to place, so we don't need to re-run the path from the initial position to check if an obstacle sends the guard into a loop. We can rewrite `endsInLoop` to take this already-gathered information into account:
 
 ```java
-private boolean endsInLoop(Set<PathStep> knownPath, PathStep currentStep, Point obstacle) {
+private boolean endsInLoop(Set<PathStep> knownPath, PathStep currentStep, Point newObstacle) {
     Set<PathStep> newSteps = new HashSet<>();
 
     while (inGrid(currentStep.position()) ) {
         Direction nextDirection = currentStep.direction();
         Point nextPosition = nextDirection.addTo(currentStep.position());
 
-        while (hasObstacle(nextPosition) || obstacle.equals(nextPosition)) {
+        while (hasObstacle(nextPosition) || nextPosition.equals(newObstacle)) {
             nextDirection = nextDirection.rotate90Right();
             nextPosition = nextDirection.addTo(currentStep.position());
         }
