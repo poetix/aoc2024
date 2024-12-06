@@ -523,7 +523,7 @@ public long reorderedUpdatesSum() {
 
 Did I start out by writing the graph traversal algorithm from my interview question, then realise I was being silly and throw it away again? I did. But actually it gave me a useful intuition, which was to build the initial lookup map. Only the traversal itself turned out to be unnecessary.
 
-# Day 6
+## Day 6
 
 Welcome again to our friend `SparseGrid`! I found this puzzle _tricksy_, to the point where having reached a successful solution I then tried to tidy it up and managed to break it quite mysteriously.
 
