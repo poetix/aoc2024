@@ -3,7 +3,6 @@ package com.codepoetics.aoc2024;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
-import java.util.function.Function;
 import java.util.stream.Stream;
 
 public class Day4 {
@@ -48,8 +47,8 @@ public class Day4 {
     @Test
     public void countXmasesAndCrosses() {
         WordsearchGrid grid = new WordsearchGrid(DenseGrid.of(
-                ResourceReader.of("/day4.txt").readLines().toList(),
-                Function.identity()
+                ResourceReader.of("/day4.txt").readLines(),
+                (ignored, c) -> c
         ));
 
         System.out.println(grid.countXmases());

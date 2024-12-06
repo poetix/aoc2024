@@ -1,20 +1,21 @@
 package com.codepoetics.aoc2024;
 
 import java.util.List;
-import java.util.function.Function;
+import java.util.function.BiFunction;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 public record DenseGrid<T>(T[][] grid) implements Grid<T> {
 
-    public static <T> DenseGrid<T> of(List<String> lines, Function<Character, T> interpreter) {
+    public static <T> DenseGrid<T> of(Stream<String> input, BiFunction<Point, Character, T> interpreter) {
+        List<String> lines = input.toList();
         int height = lines.size();
         int width = lines.getFirst().length();
         T[][] grid = (T[][]) new Object[height][width];
         for (int y = 0; y < height; y++) {
             char[] lineChars = lines.get(y).toCharArray();
             for (int x = 0; x < width; x++) {
-                grid[y][x] = interpreter.apply(lineChars[x]);
+                grid[y][x] = interpreter.apply(new Point(x, y), lineChars[x]);
             }
         }
         return new DenseGrid<>(grid);

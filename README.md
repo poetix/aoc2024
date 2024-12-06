@@ -522,3 +522,177 @@ public long reorderedUpdatesSum() {
 ```
 
 Did I start out by writing the graph traversal algorithm from my interview question, then realise I was being silly and throw it away again? I did. But actually it gave me a useful intuition, which was to build the initial lookup map. Only the traversal itself turned out to be unnecessary.
+
+# Day 6
+
+Welcome again to our friend `SparseGrid`! I found this puzzle _tricksy_, to the point where having reached a successful solution I then tried to tidy it up and managed to break it quite mysteriously.
+
+Part 1 is simple enough, and we have some of the bits we need already:
+
+```java
+public Set<Point> guardPath() {
+    Set<Point> visited = new HashSet<>();
+
+    Point position = initialGuardPosition;
+    Direction direction = Direction.NORTH;
+
+    while (inGrid(position)) {
+        Point nextPosition = direction.addTo(position);
+
+        while (hasObstacle(nextPosition)) {
+            direction = direction.rotate90Right();
+            nextPosition = direction.addTo(position);
+        }
+
+        visited.add(position);
+        position = nextPosition;
+    }
+
+    return visited;
+}
+
+public int guardPathSize() {
+    return guardPath().size();
+}
+```
+
+Simple enough: start at the initial position, facing North. Until you leave the grid, keep moving in the direction you're facing, unless there's an obstacle there, in which case rotate 90 degrees to the right until there isn't and then move. Keep track of the positions you've visited in a set, so we don't count multiple visits to the same position (i.e. moving in different directions) more than once.
+
+To reach a naive solution we just need to try placing an obstacle at every position in the discovered route except the starting position, then running the route from the beginning and seeing if it gets into a loop with that obstacle in place. To do the loop detection we need to keep track not only of which positions we've visited, but which direction we were going in when we visited them (since routes do sometimes cross over or double back on themselves). Here's what that looks like:
+
+```java
+record PathStep(Point position, Direction direction) {}
+
+private boolean endsInLoop(Point obstacle) {
+    Set<PathStep> visited = new HashSet<>();
+
+    Point position = initialGuardPosition;
+    Direction direction = Direction.NORTH;
+
+    while (inGrid(position)) {
+        PathStep step = new PathStep(position, direction);
+        if (visited.contains(step)) return true;
+        visited.add(step);
+
+        var nextPosition = direction.addTo(position);
+        while (hasObstacle(nextPosition) || nextPosition.equals(obstacle)) {
+            direction = direction.rotate90Right();
+            nextPosition = direction.addTo(position);
+        }
+
+        position = nextPosition;
+    }
+
+    return false;
+}
+
+public long countObstaclePositions() {
+    return guardPath().stream()
+            .filter(p -> !p.equals(initialGuardPosition) &&
+                    endsInLoop(p))
+            .distinct()
+            .count();
+}
+```
+
+Can we do a little better than that, in terms of efficiency? Well, yes, but here devils lie in wait.
+
+The basic idea is that as we run through the path placing obstacles, we are already building up some of the set of path steps that the guard will have taken before reaching each obstacle we try to place, so we don't need to re-run the path from the initial position to check if an obstacle sends the guard into a loop. We can rewrite `endsInLoop` to take this already-gathered information into account:
+
+```java
+private boolean endsInLoop(Set<PathStep> knownPath, PathStep currentStep, Point obstacle) {
+    Set<PathStep> newSteps = new HashSet<>();
+
+    while (inGrid(currentStep.position()) ) {
+        Direction nextDirection = currentStep.direction();
+        Point nextPosition = nextDirection.addTo(currentStep.position());
+
+        while (hasObstacle(nextPosition) || obstacle.equals(nextPosition)) {
+            nextDirection = nextDirection.rotate90Right();
+            nextPosition = nextDirection.addTo(currentStep.position());
+        }
+
+        newSteps.add(currentStep);
+        currentStep = new PathStep(nextPosition, nextDirection);
+        if (knownPath.contains(currentStep) || newSteps.contains(currentStep)) return true;
+    }
+
+    return false;
+}
+```
+
+The `knownPath` parameter captures steps we've taken already; the `currentStep` parameter captures where we are and what direction we're facing. We proceed from there, looking in both the `knownPath` and `newSteps` collections to see if we've looped back on ourselves.
+
+To make this work, we need our `guardPath` function to return an ordered list of `PathStep`s rather than just a set of positions visited:
+
+```java
+public List<PathStep> guardPath2() {
+    List<PathStep> path = new ArrayList<>();
+
+    PathStep currentStep = new PathStep(initialGuardPosition, Direction.NORTH);
+
+    while (inGrid(currentStep.position)) {
+        var nextDirection = currentStep.direction();
+        Point nextPosition = nextDirection.addTo(currentStep.position());
+
+        while (hasObstacle(nextPosition)) {
+            nextDirection = nextDirection.rotate90Right();
+            nextPosition = nextDirection.addTo(currentStep.position());
+        }
+
+        path.add(currentStep);
+        currentStep = new PathStep(nextPosition, nextDirection);
+    }
+
+    return path;
+}
+```
+
+And now comes the bit where I mysteriously messed it up. What's wrong with this function?
+
+```java
+public int countObstaclePositions2(List<PathStep> guardPath) {
+    Set<PathStep> pathSoFar = new HashSet<>();
+    Set<Point> obstacles = new HashSet<>();
+
+    PathStep currentStep = guardPath.getFirst();
+    for (PathStep nextStep : guardPath.subList(1, guardPath.size())) {
+        if (endsInLoop(pathSoFar, currentStep, nextStep.position())) {
+            obstacles.add(nextStep.position());
+        }
+        pathSoFar.add(currentStep);
+        currentStep = nextStep;
+    }
+
+    return obstacles.size();
+}
+```
+
+It looks fine! It returns the same result for the test input!! It returns a different answer for the full input!!!
+
+The problem is this: whether an obstacle sends us into a loop depends on what direction we're facing when we hit it. If a path crosses over itself, then an obstacle encountered later in the path will send us in a different direction to an obstacle encountered earlier in the path, with potentially different results. We can get a false positive if, on first encounter with the obstacle, the guard would take a non-looping path, but if they proceeded through it and came up against it from a different direction later in their path it would send them in to a loop.
+
+So, to eliminate these false positives we have to eliminate obstacle positions we've already tried:
+
+```java
+public int countObstaclePositions2(List<PathStep> guardPath) {
+    Set<PathStep> pathSoFar = new HashSet<>();
+    Set<Point> obstacles = new HashSet<>();
+    Set<Point> tried = new HashSet<>();
+
+    PathStep currentStep = guardPath.getFirst();
+    for (PathStep nextStep : guardPath.subList(1, guardPath.size())) {
+        if (!tried.contains(nextStep.position) &&
+                endsInLoop(pathSoFar, currentStep, nextStep.position())) {
+            obstacles.add(nextStep.position());
+        }
+        tried.add(nextStep.position);
+        pathSoFar.add(currentStep);
+        currentStep = nextStep;
+    }
+
+    return obstacles.size();
+}
+```
+
+_Now_ it works. But for the sake of getting the star, you might as well go with the naive version - there's a difference of perhaps 250ms in it.

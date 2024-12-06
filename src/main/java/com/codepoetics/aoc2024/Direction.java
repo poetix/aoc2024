@@ -1,23 +1,23 @@
 package com.codepoetics.aoc2024;
 
+import java.util.Arrays;
+
 public enum Direction {
-    NORTH(0, -1),
-    SOUTH(0, 1),
-    EAST(1, 0),
-    WEST(-1, 0),
-    NORTHEAST(1, -1),
-    SOUTHEAST(1, 1),
-    NORTHWEST(-1, -1),
-    SOUTHWEST(-1, 1);
+    NORTH(0, 0, -1),
+    NORTHEAST(1,1, -1),
+    EAST(2, 1, 0),
+    SOUTHEAST(3, 1, 1),
+    SOUTH(4, 0, 1),
+    SOUTHWEST(5, -1, 1),
+    WEST(6, -1, 0),
+    NORTHWEST(7, -1, -1);
 
-    public static final Direction[] DIAGONALS = new Direction[] {
-            NORTHEAST, SOUTHEAST, NORTHWEST, SOUTHWEST
-    };
-
+    private final int index;
     private final int xd;
     private final int yd;
 
-    Direction(int xd, int yd) {
+    Direction(int index, int xd, int yd) {
+        this.index = index;
         this.xd = xd;
         this.yd = yd;
     }
@@ -27,15 +27,10 @@ public enum Direction {
     }
 
     public Direction inverse() {
-        return switch (this) {
-            case NORTH -> SOUTH;
-            case SOUTH -> NORTH;
-            case EAST -> WEST;
-            case WEST -> EAST;
-            case NORTHEAST -> SOUTHWEST;
-            case SOUTHEAST -> NORTHWEST;
-            case NORTHWEST -> SOUTHEAST;
-            case SOUTHWEST -> NORTHEAST;
-        };
+        return values()[(index + 4) % 8];
+    }
+
+    public Direction rotate90Right() {
+        return values()[(index + 2) % 8];
     }
 }

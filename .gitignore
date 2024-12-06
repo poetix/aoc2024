@@ -2,6 +2,8 @@
 target/**
 src/test/resources/**
 
+RangeSet.java
+
 # Compiled class file
 *.class
 

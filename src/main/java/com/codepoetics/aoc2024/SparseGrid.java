@@ -3,7 +3,7 @@ package com.codepoetics.aoc2024;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Function;
+import java.util.function.BiFunction;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
@@ -12,7 +12,7 @@ public record SparseGrid<T>(
         @Override int width,
         @Override int height) implements Grid<T> {
 
-    public static <T> SparseGrid<T> of(Stream<String> input, Function<Character, T> interpreter) {
+    public static <T> SparseGrid<T> of(Stream<String> input, BiFunction<Point, Character, T> interpreter) {
         AtomicInteger atomicY = new AtomicInteger(0);
         AtomicInteger width = new AtomicInteger();
 
@@ -23,7 +23,7 @@ public record SparseGrid<T>(
 
             IntStream.range(0, line.length()).forEach(x -> {
                 var position = new Point(x, y);
-                var interpreted = interpreter.apply(line.charAt(x));
+                var interpreted = interpreter.apply(position, line.charAt(x));
                 if (interpreted != null) {
                     map.put(position, interpreted);
                 }
