@@ -225,7 +225,7 @@ print(sum(1 for record in records if (is_safe_with_dampening(record))))
 
 At last, an opportunity to use [sealed interfaces](https://docs.oracle.com/en/java/javase/17/language/sealed-classes-and-interfaces.html) and [record-matching](https://docs.oracle.com/en/java/javase/23/language/record-patterns.html) inside `switch`.
 
-The task at hand is relatively simple: pick out of a each line everything that looks like either `mul(x, y)`, `do()` or `don't()`, then feed these instructions to a very simple little state machine:
+The task at hand is relatively simple: pick out of each line everything that looks like either `mul(x, y)`, `do()` or `don't()`, then feed these instructions to a very simple little state machine:
 
 Here's the sealed interface:
 
@@ -696,3 +696,117 @@ public int countObstaclePositions2(List<PathStep> guardPath) {
 ```
 
 _Now_ it works. But for the sake of getting the star, you might as well go with the naive version - there's a difference of perhaps 250ms in it.
+
+## Day 7
+
+A software engineer has a problem which they attempt to solve using recursion. Now a software engineer has a problem with they attempt to solve using recursion and a software engineer has a problem which they attempt to solve using recursion. Now a software engineer has a problem which they attempt to solve using recursion and a software engineer has a problem which they attempt to solve using recursion and a software engineer has a problem which they attempt to solve using recursion and a software engineer has a problem which they attempt to solve using recursion...
+
+This is one of those "pause for breath" problems. Here's the nub:
+
+```java
+record Equation(long result, long[] numbers) {
+
+    public boolean isValid() {
+        return isValid(numbers[0], 1);
+    }
+
+    public boolean isValid(long accumulator, int index) {
+        if (index == numbers.length) {
+            return result == accumulator;
+        }
+        if (accumulator > result) {
+            return false;
+        }
+        return isValid(accumulator + numbers[index], index + 1)
+                || isValid(accumulator * numbers[index], index + 1);
+    }
+}
+```
+
+Not that it makes much difference, but the `if (accumulator > result)` test lets us short-circuit the recursion if it's already impossible to get a valid answer.
+
+I really thought they were going to make us do operator precedence rules in part 2. How would you do that? Split recursion and evaluation: use the recursion to build up complete expressions (`a + b * c` etc), and then evaluate them. A good use for `flatMap`, in fact:
+
+```java
+public Stream<String> possibleEquations() {
+    return possibleExpressions(0).map(s -> result == evaluate(s)
+        ? result + " == " + s
+        : result + " != " + s);
+}
+
+private Stream<String> possibleExpressions(int index) {
+    if (index == numbers.length - 1) return Stream.of(Long.toString(numbers[index]));
+    return Stream.of(" + ", " * ").flatMap(operator ->
+            possibleExpressions(index + 1).map(s -> numbers[index] + operator + s)
+    );
+}
+```
+
+Here's a simple left-to-right (so no operator precedence) evaluator for the expressions returned by `possibleExpressions`:
+
+```java
+private long evaluate(String expression) {
+    String[] parts = expression.split("\\s+");
+    return evaluate(Long.parseLong(parts[0]), parts, 1);
+}
+
+private long evaluate(long lhs, String[] parts, int index) {
+    if (index == parts.length) return lhs;
+    var rhs = Long.parseLong(parts[index + 1]);
+    var newLhs = switch (parts[index]) {
+        case "+" -> lhs + rhs;
+        case "*" -> lhs * rhs;
+        default -> 0;
+    };
+    return evaluate(newLhs, parts, index + 2);
+}
+ ```
+
+If we run `possibleEquations` against the test input, we get:
+
+```
+190 != 10 + 19
+190 == 10 * 19
+3267 != 81 + 40 + 27
+3267 == 81 + 40 * 27
+3267 == 81 * 40 + 27
+3267 != 81 * 40 * 27
+83 != 17 + 5
+83 != 17 * 5
+156 != 15 + 6
+156 != 15 * 6
+7290 != 6 + 8 + 6 + 15
+7290 != 6 + 8 + 6 * 15
+7290 != 6 + 8 * 6 + 15
+7290 != 6 + 8 * 6 * 15
+7290 != 6 * 8 + 6 + 15
+7290 != 6 * 8 + 6 * 15
+7290 != 6 * 8 * 6 + 15
+7290 != 6 * 8 * 6 * 15
+161011 != 16 + 10 + 13
+161011 != 16 + 10 * 13
+161011 != 16 * 10 + 13
+161011 != 16 * 10 * 13
+192 != 17 + 8 + 14
+192 != 17 + 8 * 14
+192 != 17 * 8 + 14
+192 != 17 * 8 * 14
+21037 != 9 + 7 + 18 + 13
+21037 != 9 + 7 + 18 * 13
+21037 != 9 + 7 * 18 + 13
+21037 != 9 + 7 * 18 * 13
+21037 != 9 * 7 + 18 + 13
+21037 != 9 * 7 + 18 * 13
+21037 != 9 * 7 * 18 + 13
+21037 != 9 * 7 * 18 * 13
+292 != 11 + 6 + 16 + 20
+292 != 11 + 6 + 16 * 20
+292 == 11 + 6 * 16 + 20
+292 != 11 + 6 * 16 * 20
+292 != 11 * 6 + 16 + 20
+292 != 11 * 6 + 16 * 20
+292 != 11 * 6 * 16 + 20
+292 != 11 * 6 * 16 * 20
+```
+
+Exercise for the reader: expand this to include the "||" concatenation operator. Exercise for the masochistic reader: make `evaluate` apply operator precedence rules.
