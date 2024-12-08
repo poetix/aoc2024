@@ -810,3 +810,116 @@ If we run `possibleEquations` against the test input, we get:
 ```
 
 Exercise for the reader: expand this to include the "||" concatenation operator. Exercise for the masochistic reader: make `evaluate` apply operator precedence rules.
+
+## Day 8
+
+We are certainly getting our money's worth out of `SparseGrid`. For this puzzle we are interested in groups of items on the grid: we want the positions of all those antennae represented by the same character. Let's add a default method to the `Grid` interface to provide this (regardless of the underlying implementation):
+
+```java
+default Map<T, List<Point>> populatedPositionsByContents() {
+    return populatedSquares()
+            .collect(Collectors.groupingBy(
+                    Grid.Square::contents,
+                    Collectors.mapping(Grid.Square::position, Collectors.toList())));
+}
+```
+
+Now, for every list of positions of antennae of the same type, we want all possible pairs of antennae. Finding all the pairs in a list is a generic enough task that I'm going to put it in my `Streams` utility class:
+
+```java
+public static <I, T> Stream<T> pairsIn(List<I> items, BiFunction<I, I, T> toPair) {
+    return IntStream.range(0, items.size()).boxed().flatMap(i -> {
+        var first = items.get(i);
+        return IntStream.range(i + 1, items.size()).mapToObj(j ->
+                toPair.apply(first, items.get(j)));
+    });
+}
+```
+
+and then use it like so:
+
+```java
+private Stream<AntennaPair> antennaPairs(List<Point> positions) {
+    return Streams.pairsIn(positions, AntennaPair::new);
+}
+```
+
+We can use this to get a `Stream` of all possible pairs of antennae of the same type within the grid:
+
+```java
+private Stream<AntennaPair> antennaPairs() {
+    return antennae.populatedPositionsByContents().values().stream()
+            .flatMap(this::antennaPairs);
+}
+```
+
+Now all we need to do is find the antinode positions for any given pair of antennae. We beef up `Point` with a couple of methods to help with this:
+
+```java
+public Point minus(Point other) {
+    return new Point(x - other.x, y - other. y);
+}
+
+public Point plus(Point other) {
+    return new Point(x + other.x, y + other.y);
+}
+```
+
+Finding the Part 1 antinodes for any `AntennaPair` is now simple:
+
+```java
+public record AntennaPair(Point p1, Point p2) {
+    Stream<Point> antinodesPart1(Predicate<Point> inBounds) {
+        return Stream.of(
+                        p2.plus(p2).minus(p1),
+                        p1.plus(p1).minus(p2))
+                .filter(inBounds);
+    }
+}
+```
+
+Part 2 is not much harder:
+
+```java
+Stream<Point> antinodesPart2(Predicate<Point> inBounds) {
+    return Stream.concat(
+            nodesFromTo(p1, p2, inBounds),
+            nodesFromTo(p2, p1, inBounds));
+}
+
+private Stream<Point> nodesFromTo(Point from, Point to, Predicate<Point> inBounds) {
+    var delta = to.minus(from);
+    var nextAntinode = from;
+
+    Stream.Builder<Point> result = Stream.builder();
+    while (inBounds.test(nextAntinode)) {
+        result.add(nextAntinode);
+        nextAntinode = nextAntinode.plus(delta);
+    }
+    return result.build();
+}
+```
+
+Putting it altogether to count unique antinode positions:
+
+```java
+public long countAntinodePositionsPart1() {
+    return antennaPairs()
+            .flatMap(pair -> pair.antinodesPart1(grid::isInBounds))
+            .distinct()
+            .count();
+}
+
+public long countAntinodePositionsPart2() {
+    return antennaPairs()
+            .flatMap(pair -> pair.antinodesPart2(grid::isInBounds))
+            .distinct()
+            .count();
+}
+```
+
+This is, once again, a very `Stream` / `flatMap`-heavy approach. We break down the problem into a series of transformations of collections of things, grouping, filtering, de-duplicating and so on until we have the answer we want.
+
+We don't have to create too many intermediate collections - there's a `Map` for grouping the antennae into by type, and `Stream.Builder` is probably populating a `List` of some sort under the hood, but everything else is value-by-value transformation on streams of values.
+
+If you're used to writing nested `for`-loops, or are forced into doing so by [perverse language choices](https://go.dev/), then some of this might seem quite strange. It's a very functional style of programming, close to the way you might tackle this sort of problem in Haskell (`Stream.flatMap` is the Java equivalent of the "bind" operator `>>=` on Haskell's `List` monad). What it gets you, I think, is a way to break the problem down into small, easily-understood parts and then glue them together using a well-understood idiom. 

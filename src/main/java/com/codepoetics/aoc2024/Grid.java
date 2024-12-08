@@ -1,5 +1,8 @@
 package com.codepoetics.aoc2024;
 
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public interface Grid<T> {
@@ -8,8 +11,21 @@ public interface Grid<T> {
 
     Stream<Point> populatedPositions();
     Stream<Square<T>> populatedSquares();
+
+    default Map<T, List<Point>> populatedPositionsByContents() {
+        return populatedSquares()
+                .collect(Collectors.groupingBy(
+                        Grid.Square::contents,
+                        Collectors.mapping(Grid.Square::position, Collectors.toList())));
+    }
+
     T get(Point position);
 
     int width();
     int height();
+
+    default boolean isInBounds(Point p) {
+        return p.x() > -1 && p.x() < width()
+                && p.y() > -1 && p.y() < height();
+    }
 }
