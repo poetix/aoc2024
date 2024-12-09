@@ -21,13 +21,6 @@ public class Day9 {
             return new FileRecord(fileId, newPosition, length);
         }
 
-        public FileRecord movePartTo(Blank blank) {
-            return new FileRecord(
-                    fileId,
-                    blank.position(),
-                    blank.length());
-        }
-
         public FileRecord resizeTo(int newLength) {
             return new FileRecord(fileId, position, newLength);
         }
@@ -38,25 +31,6 @@ public class Day9 {
         }
     }
 
-    static class LinearSearchBlankTable {
-
-        private SortedSet<Blank> blanks = new TreeSet<>(Comparator.comparing(Blank::position));
-
-        public void add(Blank blank) {
-            blanks.add(blank);
-        }
-
-        public Optional<Blank> takeFirst(int minLength, int maxPosition) {
-            return blanks.stream()
-                    .filter(b -> b.length() >= minLength && b.position() < maxPosition)
-                    .findFirst()
-                    .map(blank -> {
-                        blanks.remove(blank);
-                        return blank;
-                    });
-        }
-
-    }
     static class BlankTable {
 
         private final NavigableMap<Integer, NavigableSet<Blank>> blanksByLengthAndPosition = new TreeMap<>();
@@ -213,11 +187,9 @@ public class Day9 {
             public FileRecord accept(FileRecord record) {
                 var result = record.moveTo(current.position());
 
-                if (record.length() < capacity()) {
-                    current = current.remainderAfterPopulatingWith(record);
-                } else {
-                    current = iterator.hasNext() ? iterator.next() : null;
-                }
+                current = record.length() < capacity()
+                        ? current.remainderAfterPopulatingWith(record)
+                        : iterator.hasNext() ? iterator.next() : null;
 
                 return result;
             }

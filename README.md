@@ -1044,11 +1044,9 @@ static class Blanks {
     public FileRecord accept(FileRecord record) {
         var result = record.moveTo(current.position());
 
-        if (record.length() < capacity()) {
-            current = current.remainderAfterPopulatingWith(record);
-        } else {
-            current = iterator.hasNext() ? iterator.next() : null;
-        }
+        current = record.length() < capacity()
+                ? current.remainderAfterPopulatingWith(record)
+                : iterator.hasNext() ? iterator.next() : null;
 
         return result;
     }
