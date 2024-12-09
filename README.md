@@ -922,4 +922,254 @@ This is, once again, a very `Stream` / `flatMap`-heavy approach. We break down t
 
 We don't have to create too many intermediate collections - there's a `Map` for grouping the antennae into by type, and `Stream.Builder` is probably populating a `List` of some sort under the hood, but everything else is value-by-value transformation on streams of values.
 
-If you're used to writing nested `for`-loops, or are forced into doing so by [perverse language choices](https://go.dev/), then some of this might seem quite strange. It's a very functional style of programming, close to the way you might tackle this sort of problem in Haskell (`Stream.flatMap` is the Java equivalent of the "bind" operator `>>=` on Haskell's `List` monad). What it gets you, I think, is a way to break the problem down into small, easily-understood parts and then glue them together using a well-understood idiom. 
+If you're used to writing nested `for`-loops, or are forced into doing so by [perverse language choices](https://go.dev/), then some of this might seem quite strange. It's a very functional style of programming, close to the way you might tackle this sort of problem in Haskell (`Stream.flatMap` is the Java equivalent of the "bind" operator `>>=` on Haskell's `List` monad). What it gets you, I think, is a way to break the problem down into small, easily-understood parts and then glue them together using a well-understood idiom.
+
+## Day 9
+
+GraalVM on an M2 Macbook Air is very forgiving of sub-optimal solutions, but somewhere deep down I _know_ that the gods of Big O Notation are offended by my laxity.
+
+So, I confess, my initial part 1 solution populated a big array of individual disk blocks and moved them around one block at a time, and actually this was fine. And my initial part 2 solution searched from left-to-right through a list of blank spaces until it found one of the right size for each file it was trying to relocate, and again, this was fine.
+
+Also I calculated the checksum by running across the array and adding up the file ids attached to each block, multiplied by the block index; again, _fine_.
+
+But we _can_ do better, and we _should_. We introduce a `FileRecord` which may represent the whole or a part of a file, and knows how to calculate the checksum for that whole or part:
+
+```java
+public record FileRecord(int fileId, int position, int length) {
+    public long checksum() {
+        return fileId * length *
+                ((position * 2L) + length - 1) / 2L;
+    }
+}
+```
+
+Sometimes AOC asks you to remember some high-school math. Here we are using a formula (which I googled) for summing _N_ integers from _A_ to _B_ inclusive. This alone lets us off a few microseconds in Performance Purgatory.
+
+By breaking `FileRecord`s up and moving the sub-ranges around we can compact everything without having to build or update an array of individual blocks: instead our unit of interest is the `FileRecord` itself. Here's the core of the part 1 algorithm:
+
+```java
+public long compactAndChecksum() {
+    long checksum = 0;
+
+    while (fileRecords.canCompactInto(blanks)) {
+        checksum += (blanks.compactNext(fileRecords)).checksum();
+    }
+
+    return checksum + fileRecords.checksumRemainder();
+}
+```
+
+Both `fileRecords` and `blanks` have to do a little bit of state-keeping, since either a file record or a blank might be split up during compaction. Given a current file record, and a current blank:
+
+* If the current file record is larger than the current blank, then we split the current file record into a part which gets moved into the blank, filling it up, and a remainder which becomes the new current record.
+* Otherwise, we move the entire current file record into the current blank, but if there is blank space left over then we update the current blank to be this remainder.
+
+Here's the class that manages file records:
+
+```java
+static class FileRecords {
+
+    public static FileRecords iteratingOver(List<FileRecord> records) {
+        return new FileRecords(records.reversed().iterator());
+    }
+
+    private final Iterator<FileRecord> iterator;
+    private FileRecord current;
+
+    private FileRecords(Iterator<FileRecord> iterator) {
+        this.iterator = iterator;
+        this.current = iterator.hasNext() ? iterator.next() : null;
+    }
+
+    public boolean canCompactInto(Blanks blanks) {
+        return blanks.hasCapacityBefore(current.position());
+    }
+
+    public FileRecord compactInto(Blanks blanks, int capacity) {
+        var compacted = capacity > current.length()
+                ? blanks.accept(current)
+                : blanks.accept(current.resizeTo(capacity));
+
+        current = compacted.length() < current.length()
+                ? current.resizeTo(current.length() - capacity)
+                : iterator.hasNext() ? iterator.next() : null;
+
+        return compacted;
+    }
+
+    public long checksumRemainder() {
+        long checksum = 0;
+        if (current != null) checksum += current.checksum();
+
+        while (iterator.hasNext()) {
+            checksum += iterator.next().checksum();
+        }
+
+        return checksum;
+    }
+}
+```
+
+(This is somewhat wilfully written in as much of a "tell, don't ask" style as possible, without getters).
+
+The class managing blanks is similar - it wraps an iterator, and allows the "head" of the iterator to be modified if an incoming file record doesn't completely consume a blank, or moved on to the next blank if it does:
+
+```java
+static class Blanks {
+
+    static Blanks iteratingOver(List<Blank> blanks) {
+        return new Blanks(blanks.iterator());
+    }
+
+    private final Iterator<Blank> iterator;
+    private Blank current;
+
+    private Blanks(Iterator<Blank> iterator) {
+        this.iterator = iterator;
+        this.current = iterator.hasNext() ? iterator.next() : null;
+    }
+
+    private int capacity() {
+        return current == null ? 0 : current.length();
+    }
+
+    public FileRecord compactNext(FileRecords fileRecords) {
+        return fileRecords.compactInto(this, capacity());
+    }
+
+    public boolean hasCapacityBefore(int position) {
+        return current != null && current.position() < position;
+    }
+
+    public FileRecord accept(FileRecord record) {
+        var result = record.moveTo(current.position());
+
+        if (record.length() < capacity()) {
+            current = current.remainderAfterPopulatingWith(record);
+        } else {
+            current = iterator.hasNext() ? iterator.next() : null;
+        }
+
+        return result;
+    }
+}
+```
+
+You can see a sort of dance between the two where `fileRecords.canCompactInto(blanks)` sends its current position to `blanks.hasCapacityBefore(position)` to find out whether there are any unused blank regions to the left of the current file record. Similarly, rather than _ask_ing `blanks` what the size of the current blank region is, we make a call to `blanks.compactNext(fileRecords)` which calls `fileRecords.fillBlankIn(blanks, blankSize)` _tell_ing it what size of `FileRecord` it can accept.
+
+This brings part 1 down to around 2ms, since we don't have to build any intermediate collections and are just iterating in two directions across two collections - left-to-right over `blanks`, and right-to-left over `fileRecords` - spitting out compacted records and summing their checksums as we go.
+
+Part 2 is rather different. The core of it is this:
+
+```java
+static class FileCompactor {
+
+    private final List<FileRecord> fileRecords;
+    private final BlankTable blankTable;
+
+    FileCompactor(List<FileRecord> fileRecords, BlankTable blankTable) {
+        this.fileRecords = fileRecords;
+        this.blankTable = blankTable;
+    }
+
+    public long compactByFileAndChecksum() {
+        return fileRecords.reversed().stream()
+                .map(this::tryMoveRecord)
+                .mapToLong(FileRecord::checksum)
+                .sum();
+    }
+
+    private FileRecord tryMoveRecord(FileRecord record) {
+        return blankTable.takeFirst(record.length(), record.position())
+                .map(blank -> moveRecord(record, blank))
+                .orElse(record);
+    }
+
+    private FileRecord moveRecord(FileRecord record, Blank blank) {
+        var remainingLength = blank.length() - record.length();
+
+        if (remainingLength > 0) {
+            blankTable.add(
+                    new Blank(
+                            blank.position() + record.length(),
+                            remainingLength));
+        }
+
+        return record.moveTo(blank.position());
+    }
+}
+```
+
+We reverse iterate through our file records, attempting to move each into the first suitable-sized blank in our blank table, and updating the blank table with leftover space as we go. All the important book-keeping is actually going on inside `BlankTable`, which keeps track of what blanks are where and, most importantly, tries to find the next usable one efficiently. Here's what that looks like:
+
+```java
+static class BlankTable {
+
+    private final NavigableMap<Integer, NavigableSet<Blank>> blanksByLengthAndPosition = new TreeMap<>();
+
+    public void add(Blank blank) {
+        blanksByLengthAndPosition.compute(blank.length(), (ignored, v) -> {
+            var s = v == null ? new TreeSet<>(Comparator.comparing(Blank::position)) : v;
+            s.add(blank);
+            return s;
+        });
+    }
+
+    private void prune(int maxPosition) {
+        var lengthIter = blanksByLengthAndPosition.values().iterator();
+
+        while (lengthIter.hasNext()) {
+            var positions = lengthIter.next();
+            var positionIter = positions.descendingIterator();
+
+            while (positionIter.hasNext()) {
+                if (positionIter.next().position() < maxPosition) break;
+                positionIter.remove();
+            }
+
+            if (positions.isEmpty()) {
+                lengthIter.remove();
+            }
+        }
+    }
+
+    public Optional<Blank> takeFirst(int minLength, int maxPosition) {
+        prune(maxPosition);
+        return blanksByLengthAndPosition.subMap(minLength, 10).entrySet().stream()
+                .min(Comparator.comparing(e -> e.getValue().getFirst().position()))
+                .map(e -> e.getValue().removeFirst());
+    }
+}
+```
+
+The important thing here is that the `NavigableMap` storing `blanksByLengthAndPosition` organises the blanks in the table into `NavigableSet`s, ordered by position, which in turn are ordered by length. So we ask (using `subMap`, which partitions the binary tree keeping the keys in order) for blanks of length at least 3, and get ordered sets of blanks of length 3, 4, 6 etc - whatever's left in the table. Then we pick the set that has the initial blank with the lowest position number, remove that blank from that set and return it.
+
+The `prune` method does some necessary tidying as we go along: it throws away blanks we can't use any more (because we're now considering file records to the left of where they start), and any empty sets, so that if there are no blanks of size 3 in the table, there is no entry (rather than an empty set of blanks) under "3" in the table.
+
+For comparison, here's a much simpler `LinearSearchBlankTable`, which doesn't do any of this organising:
+
+```java
+static class LinearSearchBlankTable {
+
+    private SortedSet<Blank> blanks = new TreeSet<>(Comparator.comparing(Blank::position));
+
+    public void add(Blank blank) {
+        blanks.add(blank);
+    }
+
+    public Optional<Blank> takeFirst(int minLength, int maxPosition) {
+        return blanks.stream()
+                .filter(b -> b.length() >= minLength && b.position() < maxPosition)
+                .findFirst()
+                .map(blank -> {
+                    blanks.remove(blank);
+                    return blank;
+                });
+    }
+
+}
+```
+
+Substituting this in takes the part 2 run time from around 40+ms to around 200+ms, because we keep having to zoom along from the beginning to find the first eligible blank.
+
+All of this does feel like a _weighty_ solution to the problem - there's so much more code here than I wrote for previous puzzles - and I do wonder whether I'm missing something more elegant.
