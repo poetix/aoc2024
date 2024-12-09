@@ -926,7 +926,7 @@ If you're used to writing nested `for`-loops, or are forced into doing so by [pe
 
 ## Day 9
 
-GraalVM on an M2 Macbook Air is very forgiving of sub-optimal solutions, but somewhere deep down I _know_ that the gods of Big O Notation are offended by my laxity.
+GraalVM on an M2 Macbook Air is very forgiving of sub-optimal solutions, but somewhere deep down I _know_ that the Gods of [Big O Notation](https://en.wikipedia.org/wiki/Big_O_notation) are offended by my laxity.
 
 So, I confess, my initial part 1 solution populated a big array of individual disk blocks and moved them around one block at a time, and actually this was fine. And my initial part 2 solution searched from left-to-right through a list of blank spaces until it found one of the right size for each file it was trying to relocate, and again, this was fine.
 
@@ -1055,7 +1055,7 @@ static class Blanks {
 
 You can see a sort of dance between the two where `fileRecords.canCompactInto(blanks)` sends its current position to `blanks.hasCapacityBefore(position)` to find out whether there are any unused blank regions to the left of the current file record. Similarly, rather than _ask_ing `blanks` what the size of the current blank region is, we make a call to `blanks.compactNext(fileRecords)` which calls `fileRecords.fillBlankIn(blanks, blankSize)` _tell_ing it what size of `FileRecord` it can accept.
 
-This brings part 1 down to around 2ms, since we don't have to build any intermediate collections and are just iterating in two directions across two collections - left-to-right over `blanks`, and right-to-left over `fileRecords` - spitting out compacted records and summing their checksums as we go.
+This brings part 1 down to around 1-2ms, since we don't have to build any intermediate collections and are just iterating in two directions across two collections - left-to-right over `blanks`, and right-to-left over `fileRecords` - spitting out compacted records and summing their checksums as we go. The Gods of Big O Notation smile upon us.
 
 Part 2 is rather different. The core of it is this:
 
