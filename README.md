@@ -982,7 +982,7 @@ static class FileRecords {
     }
 
     public boolean canCompactInto(Blanks blanks) {
-        return blanks.hasCapacityBefore(current.position());
+        return current != null && blanks.hasCapacityBefore(current.position());
     }
 
     public FileRecord compactInto(Blanks blanks, int capacity) {

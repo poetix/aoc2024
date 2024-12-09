@@ -131,7 +131,7 @@ public class Day9 {
             }
 
             public boolean canCompactInto(Blanks blanks) {
-                return blanks.hasCapacityBefore(current.position());
+                return current != null && blanks.hasCapacityBefore(current.position());
             }
 
             public FileRecord fillBlankIn(Blanks blanks, int blankSize) {
