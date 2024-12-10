@@ -1171,3 +1171,63 @@ static class LinearSearchBlankTable {
 Substituting this in takes the part 2 run time from around 40+ms to around 200+ms, because we keep having to zoom along from the beginning to find the first eligible blank.
 
 All of this does feel like a _weighty_ solution to the problem - there's so much more code here than I wrote for previous puzzles - and I do wonder whether I'm missing something more elegant.
+
+## Day 10
+
+Not much at all to say about this one, except that it was about the shortest path possible fom part 1 to part 2 (I lost a bit of time through not having read the description properly, and incorrectly submitting part 2's answer for part 1...)
+
+I made an assumption about memoisation - that we would want to cache the valid trails from every visited point, as we would surely revisit them. As it happens, no, not really: turns out it's cheaper not to build and store a bunch of collections but just to `Stream.flatMap` your way through all the paths and de-dup at the end.
+
+A LISP-like cons cell is a useful thing to have if you're often making copies of a collection with one item appended to it. We keep track of the final item to save traversals:
+
+```java
+record Trail(Point head, Point last, Trail tail) {
+    static Trail of(Point head) {
+        return new Trail(head, head, null);
+    }
+
+    public Trail cons(Point head) {
+        return new Trail(head, last, this);
+    }
+}
+```
+
+Here's how it's used in building the trails:
+
+```java
+public Stream<Trail> trailsFrom(Point start) {
+    int value = valueAt(start);
+    if (value == 9) return Stream.of(Trail.of(start));
+
+    var nextValue = value + 1;
+    return getAdjacent(start)
+            .filter(adjacentPoint -> valueAt(adjacentPoint) == nextValue)
+            .flatMap(this::trailsFrom)
+            .map(trail -> trail.cons(start));
+}
+```
+
+and here's how we calculate our results:
+
+```java
+public long sumScores() {
+    return starts.stream().mapToLong(start ->
+        trailsFrom(start)
+                .map(Trail::last)
+                .distinct()
+                .count())
+        .sum();
+}
+
+public long sumRatings() {
+    return starts.stream().mapToLong(start ->
+        trailsFrom(start)
+                .distinct()
+                .count())
+    .sum();
+}
+```
+
+You might think "shouldn't we de-dup as we go along so the final iteration set is smaller?" and the answer is that it makes _next to no difference at all_.
+
+At this point, a complete run of days 1-10 without any warming up takes around 0.8 seconds. The slowest by far are days 6 (216ms) and 7 (469ms) - all the rest range between 4 and 39ms for both parts.

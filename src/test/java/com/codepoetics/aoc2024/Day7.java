@@ -3,6 +3,7 @@ package com.codepoetics.aoc2024;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
+import java.util.List;
 import java.util.stream.Stream;
 
 public class Day7 {
@@ -82,10 +83,13 @@ public class Day7 {
         }
     }
 
+    private List<Equation> equations = ResourceReader.of("/day7.txt").readLines()
+            .map(Equation::fromLine)
+            .toList();
+
     @Test
     public void part1() {
-        var sumOfValidEquations = ResourceReader.of("/day7.txt").readLines()
-                .map(Equation::fromLine)
+        var sumOfValidEquations = equations.stream()
                 .filter(Equation::isValid)
                 .mapToLong(Equation::result)
                 .sum();
@@ -95,14 +99,14 @@ public class Day7 {
 
     @Test
     public void part2() {
-        var sumOfValidEquations = ResourceReader.of("/day7.txt").readLines()
-                .map(Equation::fromLine)
+        var sumOfValidEquations = equations.stream()
                 .filter(Equation::isValidWithConcat)
                 .mapToLong(Equation::result)
                 .sum();
 
         System.out.println(sumOfValidEquations);
     }
+
 
     @Test
     public void buildExpressions() {

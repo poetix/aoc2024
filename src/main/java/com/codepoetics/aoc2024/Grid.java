@@ -20,6 +20,10 @@ public interface Grid<T> {
     }
 
     T get(Point position);
+    default T getOrDefault(Point position, T defaultValue) {
+        T result = get(position);
+        return result == null ? defaultValue : result;
+    }
 
     int width();
     int height();
