@@ -1178,7 +1178,7 @@ Not much at all to say about this one, except that it was about the shortest pat
 
 I made an assumption about memoisation - that we would want to cache the valid trails from every visited point, as we would surely revisit them. As it happens, no, not really: turns out it's cheaper not to build and store a bunch of collections but just to `Stream.flatMap` your way through all the paths and de-dup at the end.
 
-A LISP-like cons cell is a useful thing to have if you're often making copies of a collection with one item appended to it. We keep track of the final item to save traversals:
+A LISP-like cons cell is a useful thing to have if you're often making copies of a collection with one item prepended to it. We keep track of the final item to save traversals:
 
 ```java
 record Trail(Point head, Point last, Trail tail) {
