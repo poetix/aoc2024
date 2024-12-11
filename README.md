@@ -1174,7 +1174,7 @@ All of this does feel like a _weighty_ solution to the problem - there's so much
 
 ## Day 10
 
-Not much at all to say about this one, except that it was about the shortest path possible fom part 1 to part 2 (I lost a bit of time through not having read the description properly, and incorrectly submitting part 2's answer for part 1...)
+Not much at all to say about this one, except that it was about the shortest path possible from part 1 to part 2 (I lost a bit of time through not having read the description properly, and incorrectly submitting part 2's answer for part 1...)
 
 I made an assumption about memoisation - that we would want to cache the valid trails from every visited point, as we would surely revisit them. As it happens, no, not really: turns out it's cheaper not to build and store a bunch of collections but just to `Stream.flatMap` your way through all the paths and de-dup at the end.
 
@@ -1231,3 +1231,60 @@ public long sumRatings() {
 You might think "shouldn't we de-dup as we go along so the final iteration set is smaller?" and the answer is that it makes _next to no difference at all_.
 
 At this point, a complete run of days 1-10 without any warming up takes around 0.8 seconds. The slowest by far are days 6 (216ms) and 7 (469ms) - all the rest range between 4 and 39ms for both parts.
+
+## Day 11
+
+First puzzle in which the naive solution to part 1 explodes unmanageably in part 2. Yay! I could have seen this coming, but also I'm chasing Leaderboard positions so I did things the dumb-as-rocks way first because it was quick to implement. 
+
+There are two ways of getting part 2 to finish in a reasonable amount of time. The first is to work with a table of counts of stones by number. This enables you to reduce duplicates of the same number to a single entry in the table, and process them all in one go, nicely containing the explosion.
+
+To give you some idea of how effective that is, at the end of the 75th generation using this method we had observed 3900 distinct stone values, with the greatest number of stones of a single value at any one time being 13,167,382,607,633. Part 2 using this method takes around 30ms.
+
+The second way is a dynamic-programming inspired approach. For any given stone value, the number of stones we will have after _n_ generations of blinking at just that stone and its descendants is equal to the number of stones we will have after blinking _n - 1_ times at each of its immediate children. This suggests a memoisation approach: remember the count for each stone number and generation number, and populate the cache starting with the last generation number and working backwards.
+
+Here's what that looks like, storing the counts in primitive `long` arrays for speedy access:
+
+```java
+static class MemoisingStoneAutomaton {
+
+    private final Map<Long, long[]> countsByStoneAndTimes = new HashMap<>();
+
+    public long countAllAfter(Stream<Long> stones, int times) {
+        return stones.mapToLong(
+                stone -> countAfter(stone, times)
+        ).sum();
+    }
+    
+    private long countAfter(long stone, int times) {
+        if (times == 0) return 1;
+
+        long[] memoised = countsByStoneAndTimes.computeIfAbsent(stone, (ignored) -> new long[75]);
+        var nextIndex = times - 1;
+        var result = memoised[nextIndex];
+        if (result > 0) return result;
+
+        result = countAfterUncached(stone, times);
+        memoised[nextIndex] = result;
+        return result;
+    }
+
+    private long countAfterUncached(long stone, int times) {
+        if (stone == 0) {
+            return countAfter(1L, times - 1);
+        }
+
+        String repr = Long.toString(stone);
+        if (repr.length() % 2 == 0) {
+            String l = repr.substring(0, repr.length() / 2);
+            String r = repr.substring(repr.length() / 2);
+            return countAfter(Long.parseLong(l), times - 1) +
+                        countAfter(Long.parseLong(r), times - 1);
+        }
+
+        return countAfter(stone * 2024, times - 1);
+    }
+}
+```
+
+This was the fastest I could make it, coming in at around 12ms with a bit of warmup for part 2.
+
