@@ -1288,3 +1288,63 @@ static class MemoisingStoneAutomaton {
 
 This was the fastest I could make it, coming in at around 12ms with a bit of warmup for part 2.
 
+I took a count of cache misses (130,224) and cache hits (69562), which may seem underwhelming, but each "hit" means we potentially escape a _lot_ of recursion...
+
+## Day 12
+
+Today's puzzle breaks down into a number of reasonably straightforward sub-tasks.
+
+1. Find all the connected subgraphs of the graph where the nodes are co-ordinates in the grid, and there is an edge between any two co-ordinates with the same grid symbol.
+2. (Part 1) Measure the perimeter of each connected subgraph, and sum these measurements.
+3. (Part 2) Count the distinct verticss of the perimeter of each connected subgraph, and sum these counts.
+
+It seems a lot of people did part 2 by counting corners, which makes sense. I did it another way, which ran very slightly faster in my implementation. If you take the squares outside but adjacent to each connected region (which I already did to get my answer for part 1), you can find "fence segments" either North, South, East or West of each square. Group these segments by latitude or longitude, then order them, and you can scan each vertical or horizontal line of segments counting breaks to obtain a final total of continuous runs of fence segments.
+
+Here's what that looks like:
+
+```java
+long perimeterSides() {
+    return Direction.nsew().mapToLong(this::perimeterSidesForDirection).sum();
+}
+
+private long perimeterSidesForDirection(Direction d) {
+    var byDirection = new HashMap<Integer, SortedSet<Integer>>();
+
+    perimeterPoints.stream()
+            .filter(p -> points.contains(d.addTo(p)))
+            .forEach(p -> {
+                var index = d.isVertical() ? p.y() : p.x();
+                var subIndex = d.isVertical() ? p.x() : p.y();
+                byDirection.computeIfAbsent(index, (ignored) -> new TreeSet<>())
+                        .add(subIndex);
+            });
+
+    return byDirection.values().stream().mapToLong(this::countDiscrete).sum();
+}
+
+private long countDiscrete(SortedSet<Integer> positions) {
+    int count = 1;
+    var iter = positions.iterator();
+    var current = iter.next();
+    while (iter.hasNext()) {
+        var next = iter.next();
+        if (next - current > 1) count++;
+        current = next;
+    }
+    return count;
+}
+```
+
+For each of N, S, E and W we find all the perimeter points that have a point within the region adjacent to them in that direction. We organise these by co-ordinate, based on whether the fence segments for that position are vertical or horizontal, and sorting as we go so that we can traverse from left to right, or top to bottom, in order looking for breaks.
+
+I tried re-using the "deltas of a `PrimitiveIterator.OfInt`" code from day 2 to do `countDiscrete` with, and lol:
+
+```java
+private long countDiscrete(SortedSet<Integer> positions) {
+    var deltas = Iterators.deltas(positions.stream().mapToInt(i -> i).iterator());
+    var spliterator = Spliterators.spliterator(deltas, positions.size(), Spliterator.SIZED & Spliterator.ORDERED);
+    return StreamSupport.intStream(spliterator, false).filter(d -> d > 1).count() + 1L;
+}
+```
+
+It was slower, too.

@@ -8,7 +8,7 @@ public final class Memoisation {
 
     private Memoisation() {
     }
-    
+
     public static <A, B, C> BiFunction<A, B, C> memoise(BiFunction<A, B, C> f) {
         Map<A, Map<B, C>> storage = new HashMap<>();
         return (a, b) -> {

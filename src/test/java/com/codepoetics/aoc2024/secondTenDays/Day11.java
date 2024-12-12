@@ -27,7 +27,9 @@ public class Day11 {
             long[] memoised = countsByStoneAndTimes.computeIfAbsent(stone, (ignored) -> new long[75]);
             var nextIndex = times - 1;
             var result = memoised[nextIndex];
-            if (result > 0) return result;
+            if (result > 0) {
+                return result;
+            }
 
             result = countAfterUncached(stone, times);
             memoised[nextIndex] = result;

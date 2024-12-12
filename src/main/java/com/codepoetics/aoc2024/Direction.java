@@ -1,36 +1,40 @@
 package com.codepoetics.aoc2024;
 
-import java.util.Arrays;
+import java.util.stream.Stream;
 
 public enum Direction {
-    NORTH(0, 0, -1),
-    NORTHEAST(1,1, -1),
-    EAST(2, 1, 0),
-    SOUTHEAST(3, 1, 1),
-    SOUTH(4, 0, 1),
-    SOUTHWEST(5, -1, 1),
-    WEST(6, -1, 0),
-    NORTHWEST(7, -1, -1);
+    NORTH(0, -1),
+    NORTHEAST(1, -1),
+    EAST(1, 0),
+    SOUTHEAST(1, 1),
+    SOUTH(0, 1),
+    SOUTHWEST(-1, 1),
+    WEST(-1, 0),
+    NORTHWEST( -1, -1);
 
-    private final int index;
-    private final int xd;
-    private final int yd;
+    public static Stream<Direction> nsew() {
+        return Stream.of(NORTH, SOUTH, EAST, WEST);
+    }
 
-    Direction(int index, int xd, int yd) {
-        this.index = index;
-        this.xd = xd;
-        this.yd = yd;
+    private final Point asPoint;
+
+    Direction(int xd, int yd) {
+        this.asPoint = new Point(xd, yd);
     }
 
     public Point addTo(Point p) {
-        return new Point(p.x() + xd, p.y() + yd);
+        return p.plus(asPoint);
     }
 
     public Direction inverse() {
-        return values()[(index + 4) % 8];
+        return values()[(ordinal() + 4) % 8];
     }
 
     public Direction rotate90Right() {
-        return values()[(index + 2) % 8];
+        return values()[(ordinal() + 2) % 8];
+    }
+
+    public boolean isVertical() {
+        return asPoint.x() == 0;
     }
 }

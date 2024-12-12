@@ -6,6 +6,8 @@ import org.junit.jupiter.api.Test;
 import java.util.*;
 import java.util.stream.IntStream;
 
+import static com.codepoetics.aoc2024.Iterators.deltas;
+
 public class Day2 {
 
     record Report(int[] levels) {
@@ -25,27 +27,6 @@ public class Day2 {
             }
 
             return true;
-        }
-
-        private static PrimitiveIterator.OfInt deltas(PrimitiveIterator.OfInt levels) {
-            if (!levels.hasNext()) return IntStream.empty().iterator();
-
-            return new PrimitiveIterator.OfInt() {
-                private int previous = levels.next();
-
-                @Override
-                public boolean hasNext() {
-                    return levels.hasNext();
-                }
-
-                @Override
-                public int nextInt() {
-                    var current = levels.nextInt();
-                    var delta = current - previous;
-                    previous = current;
-                    return delta;
-                }
-            };
         }
 
         public boolean isSafe() {
