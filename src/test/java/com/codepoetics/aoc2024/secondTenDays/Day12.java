@@ -4,12 +4,10 @@ import com.codepoetics.aoc2024.*;
 import org.junit.jupiter.api.Test;
 
 import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
 
 import static java.util.stream.Collectors.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -31,47 +29,18 @@ public class Day12 {
                 return area() * perimeterSides();
             }
 
-            long bulkCostByCountingCorners() {
-                return area() * perimeterSidesByCountingCorners();
-            }
-
-            long perimeterSidesByCountingCorners() {
-                return points.stream().mapToLong(this::countCorners)
-                        .sum();
-            }
-
-
-            static boolean[] hasPerimeter = new boolean[8];
-
-            private long countCorners(Point p) {
-                for (Direction direction : Direction.values()) {
-                    hasPerimeter[direction.ordinal()] = perimeterPoints.contains(direction.addTo(p));
-                }
-                return IntStream.range(0, 4)
-                        .map(i -> i << 1)
-                        .filter(i -> {
-                            var ahead = hasPerimeter[i];
-                            var right = hasPerimeter[(i + 2) % 8];
-                            var diag = hasPerimeter[(i + 1) % 8];
-                            return (ahead && right) ||
-                                    (!ahead && !right && diag);
-                        })
-                        .count();
-            }
-
             long perimeterSides() {
-                return Direction.nsew().mapToLong(this::perimeterSidesForDirection).sum();
+                return Stream.of(Direction.WEST, Direction.EAST)
+                        .mapToLong(this::perimeterSidesForDirection)
+                        .sum() * 2;
             }
 
             private long perimeterSidesForDirection(Direction d) {
-                Function<Point, Integer> index = d.isVertical() ? Point::y : Point::x;
-                Function<Point, Integer> subIndex = d.isVertical() ? Point::x : Point::y;
-
                 Map<Integer, SortedSet<Integer>> byDirection = perimeterPoints.stream()
                         .filter(p -> points.contains(d.addTo(p)))
                         .collect(groupingBy(
-                                index,
-                                mapping(subIndex, toCollection(TreeSet::new))));
+                                Point::x,
+                                mapping(Point::y, toCollection(TreeSet::new))));
 
                 return byDirection.values().stream().mapToLong(this::countDiscrete).sum();
             }
@@ -88,6 +57,34 @@ public class Day12 {
                  return count;
             }
 
+            // For comparison
+
+            long bulkCostByCountingCorners() {
+                return area() * perimeterSidesByCountingCorners();
+            }
+
+            long perimeterSidesByCountingCorners() {
+                return points.stream().mapToLong(this::countCorners)
+                        .sum();
+            }
+
+            private static boolean[] hasPerimeter = new boolean[8];
+
+            private long countCorners(Point p) {
+                for (Direction direction : Direction.values()) {
+                    hasPerimeter[direction.ordinal()] = perimeterPoints.contains(direction.addTo(p));
+                }
+                return IntStream.range(0, 4)
+                        .map(i -> i << 1)
+                        .filter(i -> {
+                            var ahead = hasPerimeter[i];
+                            var right = hasPerimeter[(i + 2) % 8];
+                            var diag = hasPerimeter[(i + 1) % 8];
+                            return (ahead && right) ||
+                                    (!ahead && !right && diag);
+                        })
+                        .count();
+            }
         }
 
         public static Garden of(Stream<String> lines) {

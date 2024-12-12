@@ -1346,3 +1346,25 @@ private long countDiscrete(SortedSet<Integer> positions) {
 ```
 
 It was slower, too.
+
+UPDATE: Someone clever pointed out that the number of vertical sides must be equal to the number of horizontal sides, which means we can do half as many counts and simplify the logic a little:
+
+```java
+long perimeterSides() {
+    return Stream.of(Direction.WEST, Direction.EAST)
+            .mapToLong(this::perimeterSidesForDirection)
+            .sum() * 2;
+}
+
+private long perimeterSidesForDirection(Direction d) {
+    Map<Integer, SortedSet<Integer>> byDirection = perimeterPoints.stream()
+            .filter(p -> points.contains(d.addTo(p)))
+            .collect(groupingBy(
+                    Point::x,
+                    mapping(Point::y, toCollection(TreeSet::new))));
+
+    return byDirection.values().stream().mapToLong(this::countDiscrete).sum();
+}
+```
+
+A pretty nice result!
