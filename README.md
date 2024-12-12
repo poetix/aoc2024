@@ -1308,16 +1308,14 @@ long perimeterSides() {
 }
 
 private long perimeterSidesForDirection(Direction d) {
-    var byDirection = new HashMap<Integer, SortedSet<Integer>>();
+    Function<Point, Integer> index = d.isVertical() ? Point::y : Point::x;
+    Function<Point, Integer> subIndex = d.isVertical() ? Point::x : Point::y;
 
-    perimeterPoints.stream()
+    Map<Integer, SortedSet<Integer>> byDirection = perimeterPoints.stream()
             .filter(p -> points.contains(d.addTo(p)))
-            .forEach(p -> {
-                var index = d.isVertical() ? p.y() : p.x();
-                var subIndex = d.isVertical() ? p.x() : p.y();
-                byDirection.computeIfAbsent(index, (ignored) -> new TreeSet<>())
-                        .add(subIndex);
-            });
+            .collect(groupingBy(
+                    index,
+                    mapping(subIndex, toCollection(TreeSet::new))));
 
     return byDirection.values().stream().mapToLong(this::countDiscrete).sum();
 }
