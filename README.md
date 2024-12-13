@@ -1373,17 +1373,17 @@ A pretty nice result!
 
 I got stuck on this one, and asked an LLM for help finding a solution. It gave me an answer that worked, but that I didn't entirely understand. Later on, taking my daughter to nursery, I figured out the real nature of the problem, and wondered whether I could work back from that to understanding why the LLM's answer was the right one.
 
-Let's forget for a moment about the fact that you can only push a button a whole-numbered number of times, and think of the two buttons as  _vectors_. One way to think of a vector is as the combination of a direction and a velocity. The two vectors (1, 2) and (3, 6) describe the same direction at different velocities, where as the vectors (1, 2) and (6, 3) describe different directions.
+Let's forget for a moment about the fact that you can only push a button a whole-numbered number of times, and think of the two buttons as  _vectors_. One way to think of a vector is as the combination of a direction and a velocity. The two vectors (1, 2) and (3, 6) describe the same direction at different velocities, whereas the vectors (1, 2) and (6, 3) describe different directions.
 
 Starting at the origin (0, 0) we want to reach a point (x, y). We have two vectors we can scale by separate amounts _n_ and _m_ and add together to get there. Now one of the following must be true:
 
 * The two vectors point in the same direction:
   * When we add them together we get a new vector pointing in that direction.
-  * Either there is something we can multiply that vector by to get (x, y) or there isn't.
-  * If there isn't, we can't reach the prize.
-  * If there is, there are _many_ combinations of Button A and Button B that will get us there, _but_ either:
-    * Button A moves the claw more than 3 times as fast as button B, so the extra cost is worth it and we should just push A for the cheapest win, or
-    * Button A moves the claw less than three times as fast as button B, in which case we should just push button B.
+  * Either there is something we can multiply that vector by to get (x, y) or there isn't:
+    * If there isn't, we can't reach the prize.
+    * If there is, there are _many_ combinations of Button A and Button B that will get us there, _but_ either:
+      * Button A moves the claw more than 3 times as fast as button B, so the extra cost is worth it and we should just push A for the cheapest win, or
+      * Button A moves the claw less than three times as fast as button B, in which case we should just push button B.
 * The two vectors point in different directions:
   * If there is a solution:
     * We will reach it along a line passing through (x, y) in the direction described by the second vector.
