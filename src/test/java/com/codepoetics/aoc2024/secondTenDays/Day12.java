@@ -36,7 +36,7 @@ public class Day12 {
             }
 
             private long perimeterSidesForDirection(Direction d) {
-                Map<Integer, SortedSet<Integer>> byDirection = perimeterPoints.stream()
+                Map<Long, SortedSet<Long>> byDirection = perimeterPoints.stream()
                         .filter(p -> points.contains(d.addTo(p)))
                         .collect(groupingBy(
                                 Point::x,
@@ -45,7 +45,7 @@ public class Day12 {
                 return byDirection.values().stream().mapToLong(this::countDiscrete).sum();
             }
 
-            private long countDiscrete(SortedSet<Integer> positions) {
+            private long countDiscrete(SortedSet<Long> positions) {
                  int count = 1;
                  var iter = positions.iterator();
                  var current = iter.next();

@@ -2,7 +2,7 @@ package com.codepoetics.aoc2024;
 
 import java.util.stream.Stream;
 
-public record Point(int x, int y) {
+public record Point(long x, long y) {
     public Point minus(Point other) {
         return new Point(x - other.x, y - other. y);
     }

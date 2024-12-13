@@ -1368,3 +1368,45 @@ private long perimeterSidesForDirection(Direction d) {
 ```
 
 A pretty nice result!
+
+## Day 13
+
+A maths question, and a matrix maths question at that.
+
+It is helpful to know whether there are many solutions for a given machine, or just one. And in fact, although the puzzle description doesn't tell you this, there is at most one for each machine. The requirement to search for a minimum is a _complete_ red herring.
+
+How do we know there is just one? Matrix maths. For an equation:
+
+```math
+\[
+\begin{bmatrix}
+x_1 & x_2 \\
+y_1 & y_2
+\end{bmatrix}
+\begin{bmatrix}
+n \\
+m
+\end{bmatrix}
+=
+\begin{bmatrix}
+x_3 \\
+y_3
+\end{bmatrix}.
+\]
+```
+
+there is a single solution if the _determinant_ of the matrix on the left hand side is non-zero.
+
+You get the determinant by cross-multiplying and subtracting:
+
+```math
+\[
+\text{If } A = \begin{bmatrix} a & b \\ c & d \end{bmatrix}, \text{ then } \det(A) = ad - bc.
+\]
+```
+
+If it's zero you're in trouble: there are infinitely many solutions. If it's non-zero, there's just one.
+
+So, I checked out the determinants for the machines in the puzzle input for part 2, and conveniently they're all non-zero. That means we just have to find that unique solution, which we can do using [Cramer's Rule](https://en.wikipedia.org/wiki/Cramer%27s_rule). If it's non-fractional we're good, otherwise there's no whole-numbered solution and the machine can't be beat.
+
+I didn't get an LLM to write my solution, but I did ask one how to solve the equation.

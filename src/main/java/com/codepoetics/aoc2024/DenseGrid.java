@@ -43,7 +43,7 @@ public record DenseGrid<T>(T[][] grid) implements Grid<T> {
     public T get(Point position) {
         if (position.x() < 0 || position.x() >= width() ||
         position.y() < 0 || position.y() >= height()) return null;
-        return grid[position.y()][position.x()];
+        return grid[(int) position.y()][(int) position.x()];
     }
 
     @Override
