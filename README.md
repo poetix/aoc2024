@@ -1426,7 +1426,7 @@ Well, first of all, how can we tell if two vectors point in the same direction? 
 \text{If } A = \begin{bmatrix} x_1 & nx_1 \\ y_1 & ny_1 \end{bmatrix}, \text{ then } \det(A) = (x_1 . n . y_1) - (n . x_1 . y_1) = 0.
 ```
 
-In the case that the determinant is always non-zero (as it was for my puzzle input), we just apply Cramer's Rule:
+In the case that the determinant is always non-zero (as it was for my puzzle input), we just apply Cramer's Rule every time:
 
 ```math
 n = \frac{\det(A_n)}{\det(A)}, \quad m = \frac{\det(A_m)}{\det(A)},
@@ -1462,6 +1462,6 @@ just happens to be the intersection of the two lines, and
 n(x_1, y_1) + m(x_2, y_2) = (x_3, y_3)
 ```
 
-Now we just need to check that `n` and `m` are positive whole numbers and we have our unique answer.
+Now we just need to check that _n_ and _m_ are positive whole numbers and we have our unique answer.
 
  
