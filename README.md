@@ -1447,8 +1447,19 @@ y_1 & y_3
 If we expand this out for _n_ and _m_, we get:
 
 ```math
-n = \frac{ x_3y_2 - x_2y_3 }{ x_1y_2 - x_2y_1 }
+n = \frac{ x_3y_2 - x_2y_3 }{ x_1y_2 - x_2y_1 }, \quad
 m = \frac{ y1_y3 - x_3y_1 }{ x1_y2 - x_2y_1 }
+```
+
+where
+
+```math
+n(x_1, y_1)
+```
+just happens to be the intersection of the two lines, and
+
+```math
+n(x_1, y_1) + m(x_2, y_2) = (x_3, y_3)
 ```
 
 Now we just need to check that `n` and `m` are positive whole numbers and we have our unique answer.
