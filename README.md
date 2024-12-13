@@ -1423,7 +1423,7 @@ OK, so what does this mean?
 Well, first of all, how can we tell if two vectors point in the same direction? Let's say our vectors are (x1, y1) and (x2, y2). They point in the same direction if there is some _n_ such that n * x1 = x2 and n * y1 = y2. In that case, the determinant will be zero!
 
 ```math
-\text{If } A = \begin{bmatrix} x1 & n . x1 \\ y1 & n . y1 \end{bmatrix}, \text{ then } \det(A) = (x1 . n . y1) - (n . x1 . y1) = 0.
+\text{If } A = \begin{bmatrix} x_1 & nx_1 \\ y_1 & ny_1 \end{bmatrix}, \text{ then } \det(A) = (x_1 . n . y_1) - (n . x_1 . y_1) = 0.
 ```
 
 In the case that the determinant is always non-zero (as it was for my puzzle input), we just apply Cramer's Rule:
