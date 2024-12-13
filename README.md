@@ -1371,11 +1371,28 @@ A pretty nice result!
 
 ## Day 13
 
-A maths question, and a matrix maths question at that.
+I got stuck on this one, and asked an LLM for help finding a solution. It gave me an answer that worked, but that I didn't entirely understand. Later on, taking my daughter to nursery, I figured out the real nature of the problem, and wondered whether I could work back from that to understanding why the LLM's answer was the right one.
 
-It is helpful to know whether there are many solutions for a given machine, or just one. And in fact, although the puzzle description doesn't tell you this, there is at most one for each machine. The requirement to search for a minimum is a _complete_ red herring.
+Let's forget for a moment about the fact that you can only push a button a whole-numbered number of times, and think of the two buttons as  _vectors_. One way to think of a vector is as the combination of a direction and a velocity. The two vectors (1, 2) and (3, 6) describe the same direction at different velocities, where as the vectors (1, 2) and (6, 3) describe different directions.
 
-How do we know there is just one? Matrix maths. For an equation:
+Starting at the origin (0, 0) we want to reach a point (x, y). We have two vectors we can scale by separate amounts _n_ and _m_ and add together to get there. Now one of the following must be true:
+
+* The two vectors point in the same direction:
+  * When we add them together we get a new vector pointing in that direction.
+  * Either there is something we can multiply that vector by to get (x, y) or there isn't.
+  * If there isn't, we can't reach the prize.
+  * If there is, there are _many_ combinations of Button A and Button B that will get us there, _but_ either:
+    * Button A moves the claw more than 3 times as fast as button B, so the extra cost is worth it and we should just push A for the cheapest win, or
+    * Button A moves the claw less than three times as fast as button B, in which case we should just push button B.
+* The two vectors point in different directions:
+  * If there is a solution:
+    * We will reach it along a line passing through (x, y) in the direction described by the second vector.
+    * This line will intersect with the line passing through the origin in the direction described by the first vector.
+    * This point of intersection is the _only_ solution.
+
+Now as it happens my puzzle input had no pairs of vectors pointing in the same direction, so it boiled down to finding the line intersections in every case. There also weren't any cases where you'd have to move claw A _backwards_ before moving claw B _forwards_ (or vice versa), which further simplified things.
+
+What did the LLM tell me? It told me to use some matrix maths. The problem could be pictured as a matrix equation:
 
 ```math
 \begin{bmatrix}
@@ -1393,16 +1410,47 @@ y_3
 \end{bmatrix}.
 ```
 
-there is a single solution if the _determinant_ of the matrix on the left hand side is non-zero.
-
-You get the determinant by cross-multiplying and subtracting:
+The first step was to find the _determinant_ of the matrix on the left:
 
 ```math
 \text{If } A = \begin{bmatrix} a & b \\ c & d \end{bmatrix}, \text{ then } \det(A) = ad - bc.
 ```
 
-If it's zero you're in trouble: there are infinitely many solutions. If it's non-zero, there's just one.
+If the determinant was non-zero that meant there was a single solution, and we could use [Cramer's Rule](https://en.wikipedia.org/wiki/Cramer%27s_rule) to find the values of _n_ and _m_ (how many times to push buttons A and B respectively).
 
-So, I checked out the determinants for the machines in the puzzle input for part 2, and conveniently they're all non-zero. That means we just have to find that unique solution, which we can do using [Cramer's Rule](https://en.wikipedia.org/wiki/Cramer%27s_rule). If it's non-fractional we're good, otherwise there's no whole-numbered solution and the machine can't be beat.
+OK, so what does this mean?
 
-I didn't get an LLM to write my solution, but I did ask one how to solve the equation.
+Well, first of all, how can we tell if two vectors point in the same direction? Let's say our vectors are (x1, y1) and (x2, y2). They point in the same direction if there is some _n_ such that n * x1 = x2 and n * y1 = y2. In that case, the determinant will be zero!
+
+```math
+\text{If } A = \begin{bmatrix} x1 & n . x1 \\ y1 & n . y1 \end{bmatrix}, \text{ then } \det(A) = (x1 . n . y1) - (n . x1 . y1) = 0.
+```
+
+In the case that the determinant is always non-zero (as it was for my puzzle input), we just apply Cramer's Rule:
+
+```math
+n = \frac{\det(A_n)}{\det(A)}, \quad m = \frac{\det(A_m)}{\det(A)},
+```
+
+where:
+```math
+A_n = \begin{bmatrix}
+x_3 & x_2 \\
+y_3 & y_2
+\end{bmatrix}, \quad
+A_m = \begin{bmatrix}
+x_1 & x_3 \\
+y_1 & y_3
+\end{bmatrix}.
+```
+
+If we expand this out for _n_ and _m_, we get:
+
+```math
+n = \frac{ x_3y_2 - x_2y_3 }{ x_1y_2 - x_2y_1 }
+m = \frac{ y1_y3 - x_3y_1 }{ x1_y2 - x_2y_1 }
+```
+
+Now we just need to check that `n` and `m` are positive whole numbers and we have our unique answer.
+
+ 
