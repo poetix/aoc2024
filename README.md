@@ -1378,7 +1378,6 @@ It is helpful to know whether there are many solutions for a given machine, or j
 How do we know there is just one? Matrix maths. For an equation:
 
 ```math
-\[
 \begin{bmatrix}
 x_1 & x_2 \\
 y_1 & y_2
@@ -1392,7 +1391,6 @@ m
 x_3 \\
 y_3
 \end{bmatrix}.
-\]
 ```
 
 there is a single solution if the _determinant_ of the matrix on the left hand side is non-zero.
@@ -1400,9 +1398,7 @@ there is a single solution if the _determinant_ of the matrix on the left hand s
 You get the determinant by cross-multiplying and subtracting:
 
 ```math
-\[
 \text{If } A = \begin{bmatrix} a & b \\ c & d \end{bmatrix}, \text{ then } \det(A) = ad - bc.
-\]
 ```
 
 If it's zero you're in trouble: there are infinitely many solutions. If it's non-zero, there's just one.
