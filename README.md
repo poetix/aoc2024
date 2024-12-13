@@ -1378,7 +1378,7 @@ Let's forget for a moment about the fact that you can only push a button a whole
 Starting at the origin (0, 0) we want to reach a point (x, y). We have two vectors we can scale by separate amounts _n_ and _m_ and add together to get there. Now one of the following must be true:
 
 * The two vectors point in the same direction:
-  * When we add them together we get a new vector pointing in that direction.
+  * However we scale them, when we add them together we get a new vector pointing in that direction.
   * Either there is something we can multiply that vector by to get (x, y) or there isn't:
     * If there isn't, we can't reach the prize.
     * If there is, there are _many_ combinations of Button A and Button B that will get us there, _but_ either:
