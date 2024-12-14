@@ -8,10 +8,10 @@ import java.util.*;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import java.util.stream.LongStream;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class Day14 {
 
@@ -23,7 +23,21 @@ public class Day14 {
         }
     }
 
-    record Quadrant(Point topLeft, Point dimensions) {
+    record BoundingBox(Point topLeft, Point dimensions) {
+
+        public Stream<BoundingBox> quadrisect() {
+            var newDimensions = new Point(dimensions.x() / 2, dimensions().y() / 2);
+            return Stream.of(
+                    new BoundingBox(topLeft, newDimensions),
+                    new BoundingBox(topLeft().plus(new Point(newDimensions.x() + 1, 0)), newDimensions),
+                    new BoundingBox(topLeft().plus(new Point(0, newDimensions.y() + 1)), newDimensions),
+                    new BoundingBox(topLeft().plus(new Point(newDimensions.x() + 1, newDimensions.y() + 1)), newDimensions)
+            );
+        }
+
+        public double density(SortedMap<Long, SortedMap<Long, Long>> map) {
+            return ((double) countIn(map)) / (dimensions().x() * dimensions().y());
+        }
 
         public long countIn(SortedMap<Long, SortedMap<Long, Long>> map) {
             return map.subMap(topLeft.x(), topLeft.x() + dimensions.x())
@@ -55,6 +69,7 @@ public class Day14 {
             return new Robots(width, height, robots);
         }
 
+        private final BoundingBox frame;
         private final int width;
         private final int height;
         private final List<Robot> robots;
@@ -62,6 +77,7 @@ public class Day14 {
         public Robots(int width, int height, List<Robot> robots) {
             this.width = width;
             this.height = height;
+            this.frame = new BoundingBox(new Point(0, 0), new Point(width, height));
             this.robots = robots;
         }
 
@@ -82,6 +98,16 @@ public class Day14 {
             return robots.stream().map(robot ->
                     robot.positionAfter(width, height, moves)
             );
+        }
+
+        public boolean containsClusterAfter(int moves) {
+            var counts = countsOfPositionsAfter(moves);
+            double avgDensity = frame.density(counts);
+
+            return frame.quadrisect()
+                    .flatMap(BoundingBox::quadrisect)
+                    .flatMap(BoundingBox::quadrisect)
+                    .anyMatch(q -> q.density(counts) > (avgDensity * 10.0));
         }
 
         public boolean containsLineAfter(int moves) {
@@ -114,20 +140,9 @@ public class Day14 {
         }
 
         public long scoreByQuadrant(int moves) {
-            var midX = width / 2;
-            var midY = height / 2;
-            var quadrantDimensions = new Point(midX, midY);
-
-            var quadrants = Stream.of(
-                    new Quadrant(new Point(0, 0), quadrantDimensions),
-                    new Quadrant(new Point(midX + 1, 0), quadrantDimensions),
-                    new Quadrant(new Point(0, midY + 1), quadrantDimensions),
-                    new Quadrant(new Point( midX + 1, midY + 1), quadrantDimensions)
-            );
-
             var positionMap = countsOfPositionsAfter(moves);
 
-            return quadrants
+            return frame.quadrisect()
                     .mapToLong(q -> q.countIn(positionMap))
                     .reduce(1, (l, r) -> l * r);
         }
@@ -163,7 +178,7 @@ public class Day14 {
     public void part2() {
         var robots = Robots.of(101, 103, ResourceReader.of("/day14.txt").readLines());
 
-        var egg = IntStream.range(0, 10000).filter(robots::containsLineAfter).findFirst().orElseThrow();
+        var egg = IntStream.range(0, 10000).filter(robots::containsClusterAfter).findFirst().orElseThrow();
 
         assertEquals(8270, egg);
         robots.printPositions(robots.countsOfPositionsAfter(egg));
