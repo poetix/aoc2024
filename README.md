@@ -1466,6 +1466,55 @@ Now we just need to check that _n_ and _m_ are positive whole numbers and we hav
 
 ## Day 14
 
-Sheesh.
+I wrote part 1 in the expectation that if you had to quadrisect a region once to get the first answer, you might need to quadrisect it again (and again) to get the second.
 
- 
+```java
+record BoundingBox(Point topLeft, Point dimensions) {
+
+    public Stream<BoundingBox> quadrisect() {
+        var newDimensions = new Point(dimensions.x() / 2, dimensions().y() / 2);
+        return Stream.of(
+                new BoundingBox(topLeft, newDimensions),
+                new BoundingBox(topLeft().plus(new Point(newDimensions.x() + 1, 0)), newDimensions),
+                new BoundingBox(topLeft().plus(new Point(0, newDimensions.y() + 1)), newDimensions),
+                new BoundingBox(topLeft().plus(new Point(newDimensions.x() + 1, newDimensions.y() + 1)), newDimensions)
+        );
+    }
+
+    public long countIn(SortedMap<Long, SortedMap<Long, Long>> map) {
+        return map.subMap(topLeft.x(), topLeft.x() + dimensions.x())
+                .values().stream()
+                .mapToLong(byY ->
+                        byY.subMap(topLeft.y(), topLeft().y() + dimensions.y())
+                                .values().stream().mapToLong(l -> l).sum()
+                ).sum();
+    }
+}
+```
+
+Note that the `countIn` method accepts a map of counts by grid position which is already sorted by position, meaning we can efficiently grab the sub-maps of positions that lie within a given range.
+
+For part 2, I added a `density` method:
+
+```java
+public double density(SortedMap<Long, SortedMap<Long, Long>> map) {
+    return ((double) countIn(map)) / (dimensions().x() * dimensions().y());
+}
+```
+
+This enables us to search for regions of the grid that have a suspiciously higher-than-average density of points in them, like this:
+
+```java
+public boolean containsClusterAfter(int moves) {
+    var counts = countsOfPositionsAfter(moves);
+    double avgDensity = frame.density(counts);
+    double threshold = avgDensity * 8.0;
+
+    return frame.quadrisect()
+            .flatMap(BoundingBox::quadrisect)
+            .flatMap(BoundingBox::quadrisect)
+            .anyMatch(q -> q.density(counts) > threshold);
+}
+```
+
+This wasn't my initial solution, as my commit history here will attest - I pinched the "search for a continuous row of robots" approach from a Redditor. But I like this approach better, because it re-uses what we built for part 1.

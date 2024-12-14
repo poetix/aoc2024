@@ -8,7 +8,6 @@ import java.util.*;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
-import java.util.stream.LongStream;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -103,40 +102,12 @@ public class Day14 {
         public boolean containsClusterAfter(int moves) {
             var counts = countsOfPositionsAfter(moves);
             double avgDensity = frame.density(counts);
+            double threshold = avgDensity * 8.0;
 
             return frame.quadrisect()
                     .flatMap(BoundingBox::quadrisect)
                     .flatMap(BoundingBox::quadrisect)
-                    .anyMatch(q -> q.density(counts) > (avgDensity * 10.0));
-        }
-
-        public boolean containsLineAfter(int moves) {
-            Map<Long, SortedSet<Long>> pointsByRow = positionsAfter(moves).collect(Collectors.groupingBy(Point::x,
-                    Collectors.mapping(Point::y,
-                            Collectors.toCollection(TreeSet::new))));
-
-            return pointsByRow.values().stream().anyMatch(Robots::containsLine);
-        }
-
-        private static boolean containsLine(SortedSet<Long> row) {
-            var iter = row.iterator();
-            if (!iter.hasNext()) return false;
-
-            var prev = iter.next();
-            var count = 0;
-
-            while (iter.hasNext()) {
-                var next = iter.next();
-                if (next - prev == 1) {
-                    count++;
-                    if (count > 5) return true;
-                } else {
-                    count = 0;
-                }
-                prev = next;
-            }
-
-            return false;
+                    .anyMatch(q -> q.density(counts) > threshold);
         }
 
         public long scoreByQuadrant(int moves) {
@@ -157,7 +128,6 @@ public class Day14 {
                 System.out.println(s);
             });
         }
-
     }
 
     @Test
@@ -182,14 +152,5 @@ public class Day14 {
 
         assertEquals(8270, egg);
         robots.printPositions(robots.countsOfPositionsAfter(egg));
-    }
-
-
-    @Test
-    public void movement() {
-        Robot robot = new Robot(new Point(2, 4), new Point(2, -3));
-        for (var i=0; i<6; i++) {
-            System.out.println(robot.positionAfter(11, 7, i));
-        }
     }
 }
