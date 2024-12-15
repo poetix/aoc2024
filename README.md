@@ -1518,3 +1518,155 @@ public boolean containsClusterAfter(int moves) {
 ```
 
 This wasn't my initial solution, as my commit history here will attest - I pinched the "search for a continuous row of robots" approach from a Redditor. But I like this approach better, because it re-uses what we built for part 1.
+
+## Day 15
+
+What we really care about, in this puzzle, is the positions of the boxes. And in fact for part 1 and part 2 we care about them in essentially the same way, as expressed by the following interface:
+
+```java
+interface BoxSet {
+    boolean containsBox(Point position);
+    boolean canMoveBoxAt(Point position, Direction direction, Predicate<Point> hasWall);
+    void moveBoxAt(Point position, Direction direction);
+    long score();
+    String represent(int width, int height, Point botPosition, Predicate<Point> hasWall);
+}
+```
+
+When we try to move the robot, here's what happens to it and the boxes:
+
+```java
+public BoxPuzzleState afterMove(Direction direction, Predicate<Point> hasWall) {
+    var newPosition = direction.addTo(botPosition);
+
+    if (hasWall.test(newPosition)) return this;
+    if (!boxPositions.containsBox(newPosition)) return new BoxPuzzleState(newPosition, boxPositions);
+    if (!boxPositions.canMoveBoxAt(newPosition, direction, hasWall)) return this;
+
+    boxPositions.moveBoxAt(newPosition, direction);
+    return new BoxPuzzleState(newPosition, boxPositions);
+}
+```
+
+We can't move if there's a wall in the way. If there's neither a wall nor a box in the way, we just move into the new position. If there's a box in the way but we can't move it, we stay put. If there's a box in the way and we can move it, we move it then move the bot into its old position.
+
+(Note: `BoxPuzzleState` was originally meant to be immutable, i.e. we would never destructively modify `boxPositions` but rather create a new copy each time. That was because I anticipated having to do some backtracking, which in the event wasn't necessary, so here we just update the box positions...).
+
+That's nice and simple. Now all we need is an implementation of `BoxSet` for part 1:
+
+```java
+static class SingleCellBoxSet implements BoxSet {
+
+    private final Set<Point> boxPositions;
+
+    SingleCellBoxSet(Set<Point> boxPositions) {
+        this.boxPositions = boxPositions;
+    }
+
+    @Override
+    public boolean containsBox(Point position) {
+        return boxPositions.contains(position);
+    }
+
+    @Override
+    public boolean canMoveBoxAt(Point position, Direction direction, Predicate<Point> hasWall) {
+        var afterMove = direction.addTo(position);
+        if (hasWall.test(afterMove)) return false;
+
+        return !containsBox(afterMove) || canMoveBoxAt(afterMove, direction, hasWall);
+    }
+
+    @Override
+    public void moveBoxAt(Point position, Direction direction) {
+        boxPositions.remove(position);
+        var newPosition = direction.addTo(position);
+        while (containsBox(newPosition)) {
+            newPosition = direction.addTo(newPosition);
+        }
+        boxPositions.add(newPosition);
+    }
+
+    @Override
+    public long score() {
+        return boxPositions.stream().mapToLong(p -> p.y() * 100 + p.x()).sum();
+    }
+
+    @Override
+    public String represent(int width, int height, Point botPosition, Predicate<Point> hasWall) {
+        // draw the map with these boxes placed in it
+    }
+}
+```
+
+We make the simplifying assumption that if we have to push a whole row or column of boxes we don't actually have to "move" each individual box - we can take the one off the front of the line and put it at the back.
+
+Part 2 is naturally a little more involved:
+
+```java
+static class DualCellBoxSet implements BoxSet {
+
+        private final Map<Point, Point> boxPositions;
+
+        DualCellBoxSet(Map<Point, Point> boxPositions) {
+            this.boxPositions = boxPositions;
+        }
+
+        @Override
+        public boolean containsBox(Point position) {
+            return boxPositions.containsKey(position);
+        }
+
+        @Override
+        public boolean canMoveBoxAt(Point position, Direction direction, Predicate<Point> hasWall) {
+            var boxStart = boxPositions.get(position);
+            var newLeft = direction.addTo(boxStart);
+            var newRight = Direction.EAST.addTo(newLeft);
+
+            if (hasWall.test(newLeft) || hasWall.test(newRight)) return false;
+
+            var boxAtNewLeft = boxPositions.get(newLeft);
+            var boxAtNewRight = boxPositions.get(newRight);
+
+            if (!(boxAtNewLeft == null
+                    || boxAtNewLeft.equals(boxStart)
+                    || canMoveBoxAt(boxAtNewLeft, direction, hasWall))) return false;
+
+            return boxAtNewRight == null
+                    || boxAtNewRight.equals(boxStart)
+                    || canMoveBoxAt(boxAtNewRight, direction, hasWall);
+        }
+
+        @Override
+        public void moveBoxAt(Point position, Direction direction) {
+            var movedBoxLeft = boxPositions.get(position);
+            var movedBoxRight = Direction.EAST.addTo(movedBoxLeft);
+
+            boxPositions.remove(movedBoxLeft);
+            boxPositions.remove(movedBoxRight);
+
+            var newLeft = direction.addTo(movedBoxLeft);
+            var newRight = direction.addTo(movedBoxRight);
+
+            if (containsBox(newLeft)) moveBoxAt(newLeft, direction);
+            if (containsBox(newRight)) moveBoxAt(newRight, direction);
+
+            boxPositions.put(newLeft, newLeft);
+            boxPositions.put(newRight, newLeft);
+        }
+
+        @Override
+        public long score() {
+            return boxPositions.values().stream().distinct().mapToLong(p ->
+                    p.y() * 100 + p.x()).sum();
+        }
+
+        @Override
+        public String represent(int width, int height, Point botPosition, Predicate<Point> hasWall) {
+            // etc
+        }
+    }
+```
+
+Here we keep a map of grid positions containing boxes to the position of the "left" side of each box. When we want to move a box, we have to test that both sides can be moved, and if each side touches a different box then we have to move both before we move the box we're currently moving. It is all, as you can see, very recursive.
+
+Nice and fast, this one. Exercise for the reader: double the height, too.

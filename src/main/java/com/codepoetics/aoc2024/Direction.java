@@ -12,6 +12,15 @@ public enum Direction {
     WEST(-1, 0),
     NORTHWEST( -1, -1);
 
+    public static Direction fromChar(char c) {
+        return switch(c) {
+            case '^' -> NORTH;
+            case '>' -> EAST;
+            case 'v' -> SOUTH;
+            case '<' -> WEST;
+            default -> throw new IllegalArgumentException();
+        };
+    }
     public static Stream<Direction> nsew() {
         return Stream.of(NORTH, SOUTH, EAST, WEST);
     }

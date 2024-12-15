@@ -1,13 +1,16 @@
 package com.codepoetics.aoc2024.secondTenDays;
 
+import com.codepoetics.aoc2024.GCD;
 import com.codepoetics.aoc2024.Point;
 import com.codepoetics.aoc2024.ResourceReader;
 import org.junit.jupiter.api.Test;
 
 import java.util.*;
+import java.util.function.Function;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import java.util.stream.LongStream;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -80,6 +83,33 @@ public class Day14 {
             this.robots = robots;
         }
 
+        private long findPeriod(LongStream longs) {
+            return longs.reduce(GCD::lcm).orElseThrow();
+        }
+
+        public int findXmasTree() {
+            var xPeriod = (int) findPeriod(robots.stream().mapToLong(r -> width / GCD.gcd(width, Math.abs(r.velocity().x()))));
+            var yPeriod = (int) findPeriod(robots.stream().mapToLong(r -> height / GCD.gcd(height, Math.abs(r.velocity().y()))));
+            var totalPeriod = (int) GCD.lcm(xPeriod, yPeriod);
+
+            var maxX = getCyclePosition(xPeriod, Point::x);
+            var maxY = getCyclePosition(yPeriod, Point::y);
+
+            return (int) GCD.lcm(xPeriod / GCD.gcd(xPeriod, maxX), yPeriod / GCD.gcd(yPeriod, maxY));
+        }
+
+        private Integer getCyclePosition(int period, Function<Point, Long> selector) {
+            var maxesOfX = IntStream.range(0, period).map(times ->
+                    (int) robots.stream().map(robot -> selector.apply(robot.positionAfter(width, height, times)))
+                            .collect(Collectors.groupingBy(
+                                    Function.identity(),
+                                    Collectors.counting()))
+                            .values().stream().mapToLong(l -> l).max().orElseThrow()
+            ).toArray();
+            var maxX = IntStream.range(0, period).boxed().max(Comparator.comparing(index -> maxesOfX[index])).orElseThrow();
+            return maxX;
+        }
+
         private SortedMap<Long, SortedMap<Long, Long>> countsOfPositionsAfter(int moves) {
             return positionsAfter(moves).collect(
                     Collectors.groupingBy(
@@ -148,6 +178,7 @@ public class Day14 {
     public void part2() {
         var robots = Robots.of(101, 103, ResourceReader.of("/day14.txt").readLines());
 
+        System.out.println(robots.findXmasTree());
         var egg = IntStream.range(0, 10000).filter(robots::containsClusterAfter).findFirst().orElseThrow();
 
         assertEquals(8270, egg);
