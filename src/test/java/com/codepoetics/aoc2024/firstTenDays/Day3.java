@@ -2,7 +2,7 @@ package com.codepoetics.aoc2024.firstTenDays;
 
 import com.codepoetics.aoc2024.Instruction;
 import com.codepoetics.aoc2024.MultiplierState;
-import com.codepoetics.aoc2024.ResourceReader;
+import com.codepoetics.aoc2024.parsing.ResourceReader;
 import org.junit.jupiter.api.Test;
 
 public class Day3 {

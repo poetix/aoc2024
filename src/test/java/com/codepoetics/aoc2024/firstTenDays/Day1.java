@@ -1,7 +1,7 @@
 package com.codepoetics.aoc2024.firstTenDays;
 
-import com.codepoetics.aoc2024.ResourceReader;
-import com.codepoetics.aoc2024.TwinListParser;
+import com.codepoetics.aoc2024.parsing.ResourceReader;
+import com.codepoetics.aoc2024.parsing.TwinListParser;
 import org.junit.jupiter.api.Test;
 
 public class Day1 {

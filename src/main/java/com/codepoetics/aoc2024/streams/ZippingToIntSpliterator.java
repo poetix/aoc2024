@@ -1,8 +1,6 @@
-package com.codepoetics.aoc2024;
+package com.codepoetics.aoc2024.streams;
 
 import java.util.Spliterator;
-import java.util.function.BiFunction;
-import java.util.function.Consumer;
 import java.util.function.IntConsumer;
 import java.util.function.ToIntBiFunction;
 

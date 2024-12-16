@@ -1,4 +1,7 @@
-package com.codepoetics.aoc2024;
+package com.codepoetics.aoc2024.parsing;
+
+import com.codepoetics.aoc2024.streams.Streams;
+import com.codepoetics.aoc2024.data.SortedSequence;
 
 import java.util.stream.Stream;
 

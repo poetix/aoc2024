@@ -1,6 +1,10 @@
 package com.codepoetics.aoc2024.firstTenDays;
 
-import com.codepoetics.aoc2024.*;
+import com.codepoetics.aoc2024.grid.DenseGrid;
+import com.codepoetics.aoc2024.grid.Direction;
+import com.codepoetics.aoc2024.grid.Grid;
+import com.codepoetics.aoc2024.grid.Point;
+import com.codepoetics.aoc2024.parsing.ResourceReader;
 import org.junit.jupiter.api.Test;
 
 import java.util.*;
@@ -52,7 +56,7 @@ public class Day10 {
             if (value == 9) return Stream.of(Trail.of(start));
 
             var nextValue = value + 1;
-            return getAdjacent(start)
+            return start.adjacents()
                     .filter(adjacentPoint -> valueAt(adjacentPoint) == nextValue)
                     .flatMap(this::trailsFrom)
                     .map(trail -> trail.cons(start));

@@ -1,6 +1,10 @@
 package com.codepoetics.aoc2024.firstTenDays;
 
-import com.codepoetics.aoc2024.*;
+import com.codepoetics.aoc2024.grid.Grid;
+import com.codepoetics.aoc2024.grid.Point;
+import com.codepoetics.aoc2024.grid.SparseGrid;
+import com.codepoetics.aoc2024.parsing.ResourceReader;
+import com.codepoetics.aoc2024.streams.Streams;
 import org.junit.jupiter.api.Test;
 
 import java.util.*;

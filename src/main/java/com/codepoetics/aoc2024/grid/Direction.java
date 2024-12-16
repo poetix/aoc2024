@@ -1,4 +1,4 @@
-package com.codepoetics.aoc2024;
+package com.codepoetics.aoc2024.grid;
 
 import java.util.stream.Stream;
 
@@ -45,5 +45,9 @@ public enum Direction {
 
     public boolean isVertical() {
         return asPoint.x() == 0;
+    }
+
+    public Direction rotate90Left() {
+        return values()[(ordinal() + 6) % 8];
     }
 }

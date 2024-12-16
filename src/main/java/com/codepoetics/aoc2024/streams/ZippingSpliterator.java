@@ -1,4 +1,4 @@
-package com.codepoetics.aoc2024;
+package com.codepoetics.aoc2024.streams;
 
 import java.util.Spliterator;
 import java.util.function.BiFunction;

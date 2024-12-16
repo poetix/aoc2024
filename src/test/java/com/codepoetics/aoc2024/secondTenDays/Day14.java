@@ -1,8 +1,8 @@
 package com.codepoetics.aoc2024.secondTenDays;
 
-import com.codepoetics.aoc2024.GCD;
-import com.codepoetics.aoc2024.Point;
-import com.codepoetics.aoc2024.ResourceReader;
+import com.codepoetics.aoc2024.arithmetic.GCD;
+import com.codepoetics.aoc2024.grid.Point;
+import com.codepoetics.aoc2024.parsing.ResourceReader;
 import org.junit.jupiter.api.Test;
 
 import java.util.*;

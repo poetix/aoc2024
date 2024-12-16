@@ -1,6 +1,6 @@
 package com.codepoetics.aoc2024.firstTenDays;
 
-import com.codepoetics.aoc2024.ResourceReader;
+import com.codepoetics.aoc2024.parsing.ResourceReader;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;

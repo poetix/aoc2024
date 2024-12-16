@@ -1,4 +1,4 @@
-package com.codepoetics.aoc2024;
+package com.codepoetics.aoc2024.grid;
 
 import java.util.List;
 import java.util.Map;

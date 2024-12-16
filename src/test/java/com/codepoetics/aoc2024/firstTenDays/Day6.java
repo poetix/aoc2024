@@ -1,18 +1,19 @@
 package com.codepoetics.aoc2024.firstTenDays;
 
-import com.codepoetics.aoc2024.*;
+import com.codepoetics.aoc2024.grid.*;
+import com.codepoetics.aoc2024.parsing.ResourceReader;
 import org.junit.jupiter.api.Test;
 
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 
 public class Day6 {
 
     static class GameGrid {
-
-        record PathStep(Point position, Direction direction) {}
 
         private final Grid<Boolean> grid;
 
@@ -120,17 +121,14 @@ public class Day6 {
 
             PathStep currentStep = new PathStep(initialGuardPosition, Direction.NORTH);
 
-            while (inGrid(currentStep.position)) {
-                var nextDirection = currentStep.direction();
-                Point nextPosition = nextDirection.addTo(currentStep.position());
+            while (inGrid(currentStep.position())) {
+                path.add(currentStep);
 
-                while (hasObstacle(nextPosition)) {
-                    nextDirection = nextDirection.rotate90Right();
-                    nextPosition = nextDirection.addTo(currentStep.position());
+                while (hasObstacle(currentStep.ahead())) {
+                    currentStep = currentStep.turnRight();
                 }
 
-                path.add(currentStep);
-                currentStep = new PathStep(nextPosition, nextDirection);
+                currentStep = currentStep.goForward();
             }
 
             return path;
@@ -150,13 +148,16 @@ public class Day6 {
             Set<Point> tried = new HashSet<>();
 
             PathStep currentStep = guardPath.getFirst();
+
             for (PathStep nextStep : guardPath.subList(1, guardPath.size())) {
-                if (!tried.contains(nextStep.position) &&
+                if (!tried.contains(nextStep.position()) &&
                         endsInLoop(pathSoFar, currentStep, nextStep.position())) {
                     obstacles.add(nextStep.position());
                 }
-                tried.add(nextStep.position);
+
+                tried.add(nextStep.position());
                 pathSoFar.add(currentStep);
+
                 currentStep = nextStep;
             }
 
@@ -170,14 +171,14 @@ public class Day6 {
     public void getPathSize() {
         GameGrid grid = GameGrid.fromInput(ResourceReader.of("/day6.txt").readLines());
 
-        System.out.println(grid.guardPathSize());
+        assertEquals(4890, grid.guardPathSize());
     }
 
     @Test
     public void getObstaclePositions() {
         GameGrid grid = GameGrid.fromInput(ResourceReader.of("/day6.txt").readLines());
 
-        System.out.println(grid.countObstaclePositions());
+        assertEquals(1995, grid.countObstaclePositions());
     }
 
     @Test
@@ -186,4 +187,5 @@ public class Day6 {
 
         System.out.println(grid.countObstaclePositions2(grid.guardPath2()));
     }
+
 }

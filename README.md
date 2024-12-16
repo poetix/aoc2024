@@ -410,20 +410,20 @@ public long countXmases() {
 and counting "X-MAS"-es is not much less trivial:
 
 ```java
-import com.codepoetics.aoc2024.Direction;
+import com.codepoetics.aoc2024.grid.Direction;
 
 public boolean hasCrossAt(Point position) {
-    return Stream.of(Direction.NORTHEAST, Direction.NORTHWEST)
-            .allMatch(diagonal ->
-                    seek("MAS", diagonal.addTo(position), diagonal.inverse())) ||
-                    seek("MAS", diagonal.inverse().addTo(position), diagonal);
+  return Stream.of(Direction.NORTHEAST, Direction.NORTHWEST)
+          .allMatch(diagonal ->
+                  seek("MAS", diagonal.addTo(position), diagonal.inverse())) ||
+          seek("MAS", diagonal.inverse().addTo(position), diagonal);
 }
 
 public long countCrosses() {
-    return grid.populatedSquares()
-            .filter(entry -> entry.contents() == 'A'
-                    && hasCrossAt(entry.position()))
-            .count();
+  return grid.populatedSquares()
+          .filter(entry -> entry.contents() == 'A'
+                  && hasCrossAt(entry.position()))
+          .count();
 }
 ```
 
@@ -1670,3 +1670,148 @@ static class DualCellBoxSet implements BoxSet {
 Here we keep a map of grid positions containing boxes to the position of the "left" side of each box. When we want to move a box, we have to test that both sides can be moved, and if each side touches a different box then we have to move both before we move the box we're currently moving. It is all, as you can see, very recursive.
 
 Nice and fast, this one. Exercise for the reader: double the height, too.
+
+## Day 16
+
+Well.
+
+It would have helped to have a shortest path algorithm implementation on hand, because who doesn't need one of those from time to time, and my efforts at building one _in situ_ were haphazard having got up at 5AM GMT to race my colleagues to the stars. But we got there in the end.
+
+Let's suppose for a moment that we have an implementation of Dijkstra's shortest path algorithm after all, and work from there. What does our graph look like? It's a graph of reindeer states, where a reindeer's state (like that of a Guard, some days ago) consists of being in a particular place and facing in a particular direction. The possible transitions from such a state are to move forward, at a cost of one, or to turn left, or right, at a cost of 1,000.
+
+Building the graph of states isn't too hard, in that case. First we build up a `SparseGrid` from the empty squares in the maze:
+
+```java
+AtomicReference<Point> start = new AtomicReference<>();
+AtomicReference<Point> end = new AtomicReference<>();
+
+Grid<Boolean> paths = SparseGrid.of(lines, (p, c) -> switch(c){
+    case '#' -> null;
+    case 'S' -> {
+        start.set(p);
+        yield true;
+    }
+    case 'E' -> {
+        end.set(p);
+        yield true;
+    }
+    default -> true;
+});
+```
+
+then we fill the graph will all the possible combinations of being in a position and facing in a direction, calculating the weights and next states for things it would make sense to do in each state:
+
+```java
+paths.populatedPositions()
+    .flatMap(p -> Direction.nsew().map(d -> new PathStep(p, d)))
+    .forEach(step -> {
+        if (paths.getOrDefault(step.ahead(), false)) {
+            graph.add(step, step.goForward(), 1);
+        }
+        if (paths.getOrDefault(step.turnLeft().ahead(), false)) {
+            graph.add(step, step.turnLeft(), 1000);
+        }
+        if (paths.getOrDefault(step.turnRight().ahead(), false)) {
+            graph.add(step, step.turnRight(), 1000);
+        }
+    });
+```
+
+Notice that we don't put in a "turning" edge if it would turn the reindeer to face a wall, since the only things to do from there would be to turn back again, or turn one more time in the same direction and start retracing your steps. Either of those moves would be "inefficient" from the point of view of finding the shortest path, so we rule them out of consideration.
+
+Now we ask the magic algorithm to find the distance from the start (facing East) to every node in the graph, recording for each node the "precursor" nodes that were covered by a shortest path reaching that node. (How we do this is the hard part, and it's hidden away inside `WeightedGraph` - we'll take a look in a second).
+
+```java
+var distanceMap = graph.distanceMap(new PathStep(start, Direction.EAST));
+var distances = distanceMap.distances();
+```
+
+Given these results, we have a little more work to do to get our answers. There is more than one way to be standing at the endpoint - likely two, if it's in the top-right corner of the maze - so we need to find the shorter of the shortest paths to both:
+
+```java
+var endpoints = Direction.nsew()
+        .map(d -> new PathStep(end, d))
+        .filter(distances::containsKey)
+        .toList();
+
+var shortestPathLength = endpoints.stream()
+        .mapToLong(distances::get)
+        .min().orElseThrow();
+```
+
+Now we need to consider all of the paths that might lead to any of the endpoints that are reachable via a shortest path, extract and deduplicate the positions they traverse, and count them up:
+
+```java
+var pointsOnShortestPaths = endpoints.stream()
+        .filter(d -> distances.get(d) == shortestPathLength)
+        .flatMap(distanceMap::getPathsTo)
+        .flatMap(Lst::stream)
+        .map(PathStep::position)
+        .distinct()
+        .count();
+
+return new Result(shortestPathLength, pointsOnShortestPaths);
+```
+
+So, there's magic happening inside `graph.distanceMap(start)`, and further magic happening inside `distanceMap.getPathsTo(end)`. Let's take a look inside `WeightedGraph`.
+
+The main part of the work is the implementation of Dijkstra's algorithm here:
+
+```java
+private class DistanceMapCalculationContext {
+    private final Map<T, Long> scores = new HashMap<>();
+    private final Map<T, Set<T>> precursors = new HashMap<>();
+
+    private final PriorityQueueSet<T> q = new PriorityQueueSet<>();
+
+    public DistanceMap<T> distanceMap(T start) {
+        initialise(start);
+        populateDistanceMap();
+        return new DistanceMap<T>(scores, precursors);
+    }
+
+    private void initialise(T start) {
+        data.indices().forEach(vertex -> {
+            var score = vertex.equals(start) ? 0 : Long.MAX_VALUE;
+            q.add(score, vertex);
+            scores.put(vertex, score);
+        });
+    }
+
+    private void populateDistanceMap() {
+        while (!q.isEmpty()) {
+            T u = q.removeFirst();
+
+            var distU = scores.get(u);
+            if (distU == Long.MAX_VALUE) return;
+
+            data.get(u)
+                    .filter(weighted -> q.contains(weighted.target()))
+                    .forEach(weighted ->
+                            updateScores(u, weighted.target(), distU + weighted.weight())
+                    );
+        }
+    }
+
+    private void updateScores(T u, T v, long alt) {
+        var distV = scores.get(v);
+
+        if (alt > distV) return;
+        scores.put(v, alt);
+
+        if (alt < distV) {
+            q.reprioritise(distV, alt, v);
+            Set<T> newPrecursors = new HashSet<>();
+            newPrecursors.add(u);
+            precursors.put(v, newPrecursors);
+            return;
+        }
+
+        precursors.computeIfAbsent(v, ignored -> new HashSet<>()).add(u);
+    }
+}
+```
+
+Check the [Wikipedia article](https://en.wikipedia.org/wiki/Dijkstra%27s_algorithm) if you want to know where most of this is cribbed from. The most important part is what we do to `precursors` when overwriting a previously-estimated shortest path. For each node, the `precursors` collection holds the set of all the immediate precursor nodes through which a shortest path passes on its way to that node. If we've shortened the estimate, we overwrite the precursors for that node with a set containing just the node we came from. If we find that another node can reach the target node with the same score, we add our precursor node to the existing set. This effectively "fuses" the two paths, when we come to traverse the precursors later on to get the complete set of paths.
+
+Overall this was a bit of a slog; you're much better off re-using an existing graph library if you have one you know well. But next time, I will!

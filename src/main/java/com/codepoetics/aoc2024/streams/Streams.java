@@ -1,4 +1,4 @@
-package com.codepoetics.aoc2024;
+package com.codepoetics.aoc2024.streams;
 
 import java.util.Iterator;
 import java.util.List;
@@ -6,6 +6,7 @@ import java.util.Spliterator;
 import java.util.Spliterators;
 import java.util.function.BiFunction;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.function.ToIntBiFunction;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -51,5 +52,28 @@ public final class Streams {
             return IntStream.range(i + 1, items.size()).mapToObj(j ->
                     toPair.apply(first, items.get(j)));
         });
+    }
+
+    public static <A> Stream<A> generated(A accumulator, Function<A, A> step, Predicate<A> guard) {
+        Iterator<A> iter = new Iterator<A>() {
+
+            private A current = accumulator;
+
+            @Override
+            public boolean hasNext() {
+                return guard.test(current);
+            }
+
+            @Override
+            public A next() {
+                var result = current;
+                current = step.apply(current);
+                return result;
+            }
+        };
+
+        return StreamSupport.stream(
+                Spliterators.spliterator(iter, Integer.MAX_VALUE,
+                        Spliterator.NONNULL | Spliterator.IMMUTABLE), false);
     }
 }

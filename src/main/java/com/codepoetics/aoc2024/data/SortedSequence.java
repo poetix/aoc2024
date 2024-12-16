@@ -1,4 +1,4 @@
-package com.codepoetics.aoc2024;
+package com.codepoetics.aoc2024.data;
 
 import java.util.Comparator;
 import java.util.Map;

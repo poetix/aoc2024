@@ -1,4 +1,4 @@
-package com.codepoetics.aoc2024;
+package com.codepoetics.aoc2024.parsing;
 
 import java.io.BufferedReader;
 import java.io.IOException;
