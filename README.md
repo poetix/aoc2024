@@ -1759,56 +1759,56 @@ The main part of the work is the implementation of Dijkstra's algorithm here:
 
 ```java
 private class DistanceMapCalculationContext {
-    private final Map<T, Long> scores = new HashMap<>();
-    private final Map<T, Set<T>> precursors = new HashMap<>();
+  private final Map<T, Long> distances = new HashMap<>();
+  private final Map<T, Set<T>> precursors = new HashMap<>();
 
-    private final PriorityQueueSet<T> q = new PriorityQueueSet<>();
+  private final PriorityQueueSet<T> queue = new PriorityQueueSet<>();
 
-    public DistanceMap<T> distanceMap(T start) {
-        initialise(start);
-        populateDistanceMap();
-        return new DistanceMap<T>(scores, precursors);
+  public DistanceMap<T> distanceMap(T start) {
+    initialise(start);
+    populateDistanceMap();
+    return new DistanceMap<T>(distances, precursors);
+  }
+
+  private void initialise(T start) {
+    data.indices().forEach(vertex -> {
+      var score = vertex.equals(start) ? 0 : Long.MAX_VALUE;
+      queue.add(score, vertex);
+      distances.put(vertex, score);
+    });
+  }
+
+  private void populateDistanceMap() {
+    while (!queue.isEmpty()) {
+      T source = queue.removeFirst();
+
+      var distU = distances.get(source);
+      if (distU == Long.MAX_VALUE) return;
+
+      data.get(source)
+              .filter(weighted -> queue.contains(weighted.target()))
+              .forEach(weighted ->
+                      updateScores(source, weighted.target(), distU + weighted.weight())
+              );
+    }
+  }
+
+  private void updateScores(T source, T target, long newWeight) {
+    var distV = distances.get(target);
+
+    if (newWeight > distV) return;
+    distances.put(target, newWeight);
+
+    if (newWeight < distV) {
+      queue.reprioritise(distV, newWeight, target);
+      Set<T> newPrecursors = new HashSet<>();
+      newPrecursors.add(source);
+      precursors.put(target, newPrecursors);
+      return;
     }
 
-    private void initialise(T start) {
-        data.indices().forEach(vertex -> {
-            var score = vertex.equals(start) ? 0 : Long.MAX_VALUE;
-            q.add(score, vertex);
-            scores.put(vertex, score);
-        });
-    }
-
-    private void populateDistanceMap() {
-        while (!q.isEmpty()) {
-            T u = q.removeFirst();
-
-            var distU = scores.get(u);
-            if (distU == Long.MAX_VALUE) return;
-
-            data.get(u)
-                    .filter(weighted -> q.contains(weighted.target()))
-                    .forEach(weighted ->
-                            updateScores(u, weighted.target(), distU + weighted.weight())
-                    );
-        }
-    }
-
-    private void updateScores(T u, T v, long alt) {
-        var distV = scores.get(v);
-
-        if (alt > distV) return;
-        scores.put(v, alt);
-
-        if (alt < distV) {
-            q.reprioritise(distV, alt, v);
-            Set<T> newPrecursors = new HashSet<>();
-            newPrecursors.add(u);
-            precursors.put(v, newPrecursors);
-            return;
-        }
-
-        precursors.computeIfAbsent(v, ignored -> new HashSet<>()).add(u);
-    }
+    precursors.computeIfAbsent(target, ignored -> new HashSet<>()).add(source);
+  }
 }
 ```
 
