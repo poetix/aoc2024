@@ -1815,3 +1815,11 @@ private class DistanceMapCalculationContext {
 Check the [Wikipedia article](https://en.wikipedia.org/wiki/Dijkstra%27s_algorithm) if you want to know where most of this is cribbed from. The most important part is what we do to `precursors` when overwriting a previously-estimated shortest path. For each node, the `precursors` collection holds the set of all the immediate precursor nodes through which a shortest path passes on its way to that node. If we've shortened the estimate, we overwrite the precursors for that node with a set containing just the node we came from. If we find that another node can reach the target node with the same score, we add our precursor node to the existing set. This effectively "fuses" the two paths, when we come to traverse the precursors later on to get the complete set of paths.
 
 Overall this was a bit of a slog; you're much better off re-using an existing graph library if you have one you know well. But next time, I will!
+
+## Day 17
+
+Here I arguably did over-engineer, designing a part 1 solution that could have accommodated backtracking, infinite loop detection, even (with a tweak to include the current program in the state) self-modifying code. You never know what part 2 is going to throw at you; but as in fact it was none of those things, the interpreter I built was definitely overkill.
+
+I'm not going to discuss the part 2 solution here, because I didn't come up with it independently (thanks, Reddit) - basically, the program describes a loop with the initial value of the A register being shifted right by three bits each time until it hits 0, and neither of the other register values carries any meaning from one loop cycle to the next, so it becomes a question of building up an initial value three bits at a time from the intended output. In a way I was hoping for something _much_ nastier. Maybe tomorrow...
+
+An aside: the `Lst` class is starting to be useful for all those cases where I want a stack-like object I can make many copies of (for branching) without having to do array-copying. Even though strictly speaking I didn't need that here.

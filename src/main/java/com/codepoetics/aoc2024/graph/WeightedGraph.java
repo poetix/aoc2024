@@ -54,7 +54,7 @@ public class WeightedGraph<T> {
         public DistanceMap<T> distanceMap(T start) {
             initialise(start);
             populateDistanceMap();
-            return new DistanceMap<T>(distances, precursors);
+            return new DistanceMap<>(distances, precursors);
         }
 
         private void initialise(T start) {

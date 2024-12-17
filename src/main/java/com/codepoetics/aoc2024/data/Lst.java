@@ -3,6 +3,7 @@ package com.codepoetics.aoc2024.data;
 import com.codepoetics.aoc2024.streams.Streams;
 
 import java.util.Arrays;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 
 public sealed interface Lst<T> permits Lst.Empty, Lst.Cons {
@@ -22,14 +23,19 @@ public sealed interface Lst<T> permits Lst.Empty, Lst.Cons {
         return items.reduce(Lst.empty(), Lst::add, (l, ignored) -> l);
     }
 
-    default Lst<T> add(T item) {
-        return new Cons<T>(item, this);
-    }
-
     T head();
     Lst<T> tail();
     boolean isEmpty();
+    int size();
     Stream<T> stream();
+    T last();
+    Lst<T> add(T value);
+
+    default Lst<T> reverse() {
+        AtomicReference<Lst<T>> result = new AtomicReference<>(Lst.empty());
+        stream().forEach(value -> result.set(result.get().add(value)));
+        return result.get();
+    }
 
     record Empty<T>() implements Lst<T> {
 
@@ -44,6 +50,10 @@ public sealed interface Lst<T> permits Lst.Empty, Lst.Cons {
         }
 
         @Override
+        public T last() {
+            throw new UnsupportedOperationException("Cannot get last element from an empty list");
+        }
+        @Override
         public boolean isEmpty() {
             return true;
         }
@@ -52,9 +62,17 @@ public sealed interface Lst<T> permits Lst.Empty, Lst.Cons {
         public Stream<T> stream() {
             return Stream.empty();
         }
+
+        @Override
+        public int size() { return 0; }
+
+        @Override
+        public Lst<T> add(T element) {
+            return new Cons<>(element, this, 1, element);
+        }
     }
 
-    record Cons<T>(@Override T head, @Override Lst<T> tail) implements Lst<T> {
+    record Cons<T>(@Override T head, @Override Lst<T> tail, @Override int size, @Override T last) implements Lst<T> {
 
         @Override
         public boolean isEmpty() {
@@ -63,7 +81,14 @@ public sealed interface Lst<T> permits Lst.Empty, Lst.Cons {
 
         @Override
         public Stream<T> stream() {
-            return Streams.generated((Lst<T>) this, Lst::tail, l -> !l.isEmpty()).map(Lst::head);
+            return Streams.generated((Lst<T>) this, Lst::tail, l -> !l.isEmpty())
+                    .limit(size)
+                    .map(Lst::head);
+        }
+
+        @Override
+        public Lst<T> add(T value) {
+            return new Cons<>(value, this, size + 1, last);
         }
     }
 }
