@@ -6,6 +6,7 @@ import com.codepoetics.aoc2024.grid.Point;
 import com.codepoetics.aoc2024.parsing.ResourceReader;
 import org.junit.jupiter.api.Test;
 
+import java.time.Instant;
 import java.util.*;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -15,10 +16,16 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class Day18 {
 
-    record ConnectedObstacleGroup(Set<Point> points, boolean meetsLeftEdge, boolean meetsRightEdge, boolean meetsTopEdge) {
+    record ConnectedObstacleGroup(
+            Set<Point> points,
+            boolean meetsLeftEdge,
+            boolean meetsRightEdge,
+            boolean meetsTopEdge,
+            boolean meetsBottomEdge) {
 
         static ConnectedObstacleGroup empty() {
-            return new ConnectedObstacleGroup(new HashSet<>(), false, false, false);
+            return new ConnectedObstacleGroup(new HashSet<>(),
+                    false, false, false, false);
         }
 
         public boolean isConnectedTo(Point point) {
@@ -30,11 +37,14 @@ public class Day18 {
             return new ConnectedObstacleGroup(points,
                     meetsLeftEdge || other.meetsLeftEdge,
                     meetsRightEdge || other.meetsRightEdge,
-                    meetsTopEdge || other.meetsTopEdge);
+                    meetsTopEdge || other.meetsTopEdge,
+                    meetsBottomEdge || other.meetsBottomEdge);
         }
 
         public boolean isBlockade() {
-            return meetsLeftEdge && (meetsTopEdge || meetsRightEdge);
+            return (meetsLeftEdge && (meetsTopEdge || meetsRightEdge))
+                    || (meetsTopEdge && meetsBottomEdge)
+                    || (meetsBottomEdge && meetsRightEdge);
         }
 
         public ConnectedObstacleGroup add(Point p) {
@@ -42,7 +52,8 @@ public class Day18 {
             return new ConnectedObstacleGroup(points,
                     meetsLeftEdge || (p.x() == 0 && p.y() > 0),
                     meetsRightEdge || (p.x() == 70),
-                    meetsTopEdge || (p.y() == 0 && p.x() > 0));
+                    meetsTopEdge || (p.y() == 0 && p.x() > 0),
+                    meetsBottomEdge || p.y() == 70 && p.x() < 70);
         }
     }
 

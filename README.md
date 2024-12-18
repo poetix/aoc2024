@@ -1865,37 +1865,47 @@ private static Point findFirstBlockadingObstacleSlow(Iterator<Point> obstaclesIt
 
 If I'd just done that first I could have nabbed the second star super-quick, but for some reason I thought it would be unreasonably slow, so I set about finding a quicker way.
 
-Our path from the top left to the bottom right is blocked if there is any connected group of obstacles which runs from the left edge of the map to either the top edge or the right edge:
+Our path from the top left to the bottom right is blocked if there is any connected group of obstacles which runs from one edge of the map to another (unless it's left to bottom, or right to top, which don't bother us):
 
 ```java
-record ConnectedObstacleGroup(Set<Point> points, boolean meetsLeftEdge, boolean meetsRightEdge, boolean meetsTopEdge) {
+record ConnectedObstacleGroup(
+        Set<Point> points,
+        boolean meetsLeftEdge,
+        boolean meetsRightEdge,
+        boolean meetsTopEdge,
+        boolean meetsBottomEdge) {
 
   static ConnectedObstacleGroup empty() {
-      return new ConnectedObstacleGroup(new HashSet<>(), false, false, false);
+    return new ConnectedObstacleGroup(new HashSet<>(),
+            false, false, false, false);
   }
-  
+
   public boolean isConnectedTo(Point point) {
-      return Arrays.stream(Direction.values()).anyMatch(d -> points.contains(d.addTo(point)));
+    return Arrays.stream(Direction.values()).anyMatch(d -> points.contains(d.addTo(point)));
   }
-  
+
   public ConnectedObstacleGroup fuse(ConnectedObstacleGroup other) {
-      points.addAll(other.points());
-      return new ConnectedObstacleGroup(points,
-              meetsLeftEdge || other.meetsLeftEdge,
-              meetsRightEdge || other.meetsRightEdge,
-              meetsTopEdge || other.meetsTopEdge);
+    points.addAll(other.points());
+    return new ConnectedObstacleGroup(points,
+            meetsLeftEdge || other.meetsLeftEdge,
+            meetsRightEdge || other.meetsRightEdge,
+            meetsTopEdge || other.meetsTopEdge,
+            meetsBottomEdge || other.meetsBottomEdge);
   }
-  
+
   public boolean isBlockade() {
-      return meetsLeftEdge && (meetsTopEdge || meetsRightEdge);
+    return (meetsLeftEdge && (meetsTopEdge || meetsRightEdge))
+            || (meetsTopEdge && meetsBottomEdge)
+            || (meetsBottomEdge && meetsRightEdge);
   }
-  
+
   public ConnectedObstacleGroup add(Point p) {
-      points.add(p);
-      return new ConnectedObstacleGroup(points,
-              meetsLeftEdge || (p.x() == 0 && p.y() > 0),
-              meetsRightEdge || (p.x() == 70),
-              meetsTopEdge || (p.y() == 0 && p.x() > 0));
+    points.add(p);
+    return new ConnectedObstacleGroup(points,
+            meetsLeftEdge || (p.x() == 0 && p.y() > 0),
+            meetsRightEdge || (p.x() == 70),
+            meetsTopEdge || (p.y() == 0 && p.x() > 0),
+            meetsBottomEdge || p.y() == 70 && p.x() < 70);
   }
 }
 ```
@@ -1940,4 +1950,4 @@ private static ConnectedObstacleGroup getContainingGroup(List<ConnectedObstacleG
 }
 ```
 
-That runs in a bit under 150ms on an unwarmed JVM.
+That runs in around 45ms on a warmed-up JVM.
