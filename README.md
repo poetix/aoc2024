@@ -1823,3 +1823,121 @@ Here I arguably did over-engineer, designing a part 1 solution that could have a
 I'm not going to discuss the part 2 solution here, because I didn't come up with it independently (thanks, Reddit) - basically, the program describes a loop with the initial value of the A register being shifted right by three bits each time until it hits 0, and neither of the other register values carries any meaning from one loop cycle to the next, so it becomes a question of building up an initial value three bits at a time from the intended output. In a way I was hoping for something _much_ nastier. Maybe tomorrow...
 
 An aside: the `Lst` class is starting to be useful for all those cases where I want a stack-like object I can make many copies of (for branching) without having to do array-copying. Even though strictly speaking I didn't need that here.
+
+## Day 18
+
+You know how I mentioned earlier that it would be handy to have a weighted graph / shortest path algorithm already in the bag next time a problem requiring one came around? Well, it came around sooner than expected. Part 1 was _trivial_:
+
+```java
+private static long calculateShortestPathWith(Set<Point> obstacles) {
+    WeightedGraph<Point> graph = new WeightedGraph<>();
+    Predicate<Point> isUnobstructed = p -> !obstacles.contains(p);
+
+    IntStream.range(0, 71).boxed().flatMap(x ->
+            IntStream.range(0, 71)
+                    .mapToObj(y -> new Point(x, y))
+                    .filter(isUnobstructed)
+    ).forEach(unobstructed ->
+        unobstructed.adjacents()
+                .filter(isUnobstructed)
+                .forEach(adjacent -> graph.add(unobstructed, adjacent, 1))
+    );
+
+    return graph.distanceMap(new Point(0, 0)).distances().get(new Point(70, 70));
+}
+```
+
+What about part 2? Well, there's a slow way, which takes a bit under 6 seconds on an unwarmed JVM:
+
+```java
+private static Point findFirstBlockadingObstacleSlow(Iterator<Point> obstaclesIter) {
+    Set<Point> obstaclesSoFar = new HashSet<>();
+
+    while (obstaclesIter.hasNext()) {
+        var obstacle = obstaclesIter.next();
+        obstaclesSoFar.add(obstacle);
+        if (calculateShortestPathWith(obstaclesSoFar) == Long.MAX_VALUE) return obstacle;
+    }
+
+    throw new IllegalStateException("No blockading obstacle found");
+}
+```
+
+If I'd just done that first I could have nabbed the second star super-quick, but for some reason I thought it would be unreasonably slow, so I set about finding a quicker way.
+
+Our path from the top left to the bottom right is blocked if there is any connected group of obstacles which runs from the left edge of the map to either the top edge or the right edge:
+
+```java
+record ConnectedObstacleGroup(Set<Point> points, boolean meetsLeftEdge, boolean meetsRightEdge, boolean meetsTopEdge) {
+
+  static ConnectedObstacleGroup empty() {
+      return new ConnectedObstacleGroup(new HashSet<>(), false, false, false);
+  }
+  
+  public boolean isConnectedTo(Point point) {
+      return Arrays.stream(Direction.values()).anyMatch(d -> points.contains(d.addTo(point)));
+  }
+  
+  public ConnectedObstacleGroup fuse(ConnectedObstacleGroup other) {
+      points.addAll(other.points());
+      return new ConnectedObstacleGroup(points,
+              meetsLeftEdge || other.meetsLeftEdge,
+              meetsRightEdge || other.meetsRightEdge,
+              meetsTopEdge || other.meetsTopEdge);
+  }
+  
+  public boolean isBlockade() {
+      return meetsLeftEdge && (meetsTopEdge || meetsRightEdge);
+  }
+  
+  public ConnectedObstacleGroup add(Point p) {
+      points.add(p);
+      return new ConnectedObstacleGroup(points,
+              meetsLeftEdge || (p.x() == 0 && p.y() > 0),
+              meetsRightEdge || (p.x() == 70),
+              meetsTopEdge || (p.y() == 0 && p.x() > 0));
+  }
+}
+```
+
+If a new obstacle connects to a single obstacle group, it gets added to it. If it connects to more than one, they are fused together and the point is added to the fused group. If it connects to none, it is put into a new group:
+
+```java
+private static Point findFirstBlockadingObstacle(Collection<Point> obstacles) {
+  Set<ConnectedObstacleGroup> connectedGroups = new HashSet<>();
+
+  for (Point point : obstacles) {
+    List<ConnectedObstacleGroup> inGroups = new ArrayList<>();
+
+    for (ConnectedObstacleGroup group : connectedGroups) {
+      if (group.isConnectedTo(point)) {
+        inGroups.add(group);
+      }
+    }
+
+    connectedGroups.removeAll(inGroups);
+    ConnectedObstacleGroup containingGroup = getContainingGroup(inGroups)
+            .add(point);
+    connectedGroups.add(containingGroup);
+
+    if (containingGroup.isBlockade()) {
+      return point;
+    }
+  }
+  throw new IllegalStateException("No obstacle blockades the route");
+}
+
+private static ConnectedObstacleGroup getContainingGroup(List<ConnectedObstacleGroup> inGroups) {
+  if (inGroups.isEmpty()) {
+    return ConnectedObstacleGroup.empty();
+  }
+
+  if (inGroups.size() == 1) {
+    return inGroups.getFirst();
+  }
+  
+  return inGroups.stream().reduce(ConnectedObstacleGroup::fuse).orElseThrow();
+}
+```
+
+That runs in a bit under 150ms on an unwarmed JVM.
