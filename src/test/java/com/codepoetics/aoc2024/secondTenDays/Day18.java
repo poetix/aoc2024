@@ -1,12 +1,11 @@
 package com.codepoetics.aoc2024.secondTenDays;
 
 import com.codepoetics.aoc2024.graph.WeightedGraph;
-import com.codepoetics.aoc2024.grid.Direction;
+import com.codepoetics.aoc2024.grid.ConnectedRegion;
 import com.codepoetics.aoc2024.grid.Point;
 import com.codepoetics.aoc2024.parsing.ResourceReader;
 import org.junit.jupiter.api.Test;
 
-import java.time.Instant;
 import java.util.*;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -17,23 +16,23 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 public class Day18 {
 
     record ConnectedObstacleGroup(
-            Set<Point> points,
+            ConnectedRegion points,
             boolean meetsLeftEdge,
             boolean meetsRightEdge,
             boolean meetsTopEdge,
             boolean meetsBottomEdge) {
 
         static ConnectedObstacleGroup empty() {
-            return new ConnectedObstacleGroup(new HashSet<>(),
+            return new ConnectedObstacleGroup(new ConnectedRegion(),
                     false, false, false, false);
         }
 
         public boolean isConnectedTo(Point point) {
-            return Arrays.stream(Direction.values()).anyMatch(d -> points.contains(d.addTo(point)));
+            return points.isConnected(point);
         }
 
         public ConnectedObstacleGroup fuse(ConnectedObstacleGroup other) {
-            points.addAll(other.points());
+            points.merge(other.points);
             return new ConnectedObstacleGroup(points,
                     meetsLeftEdge || other.meetsLeftEdge,
                     meetsRightEdge || other.meetsRightEdge,
@@ -70,6 +69,11 @@ public class Day18 {
     }
 
     private static long calculateShortestPathWith(Set<Point> obstacles) {
+        var distances = getDistances(obstacles);
+        return distances.get(new Point(70, 70));
+    }
+
+    private static Map<Point, Long> getDistances(Set<Point> obstacles) {
         WeightedGraph<Point> graph = new WeightedGraph<>();
         Predicate<Point> isUnobstructed = p -> !obstacles.contains(p);
 
@@ -83,7 +87,8 @@ public class Day18 {
                     .forEach(adjacent -> graph.add(unobstructed, adjacent, 1))
         );
 
-        return graph.distanceMap(new Point(0, 0)).distances().get(new Point(70, 70));
+        var distances = graph.distanceMap(new Point(0, 0)).distances();
+        return distances;
     }
 
     @Test
@@ -114,16 +119,14 @@ public class Day18 {
         Set<ConnectedObstacleGroup> connectedGroups = new HashSet<>();
 
         for (Point point : obstacles) {
-            List<ConnectedObstacleGroup> inGroups = new ArrayList<>();
+            List<ConnectedObstacleGroup> connectedToPoint = connectedGroups.stream()
+                    .filter(group -> group.isConnectedTo(point))
+                    .toList();
 
-            for (ConnectedObstacleGroup group : connectedGroups) {
-                if (group.isConnectedTo(point)) {
-                    inGroups.add(group);
-                }
-            }
-
-            connectedGroups.removeAll(inGroups);
-            ConnectedObstacleGroup containingGroup = getContainingGroup(inGroups)
+            connectedToPoint.forEach(connectedGroups::remove);
+            ConnectedObstacleGroup containingGroup = connectedToPoint.stream()
+                    .reduce(ConnectedObstacleGroup::fuse)
+                    .orElseGet(ConnectedObstacleGroup::empty)
                     .add(point);
             connectedGroups.add(containingGroup);
 
@@ -131,19 +134,8 @@ public class Day18 {
                 return point;
             }
         }
+
         throw new IllegalStateException("No obstacle blockades the route");
-    }
-
-    private static ConnectedObstacleGroup getContainingGroup(List<ConnectedObstacleGroup> inGroups) {
-        if (inGroups.isEmpty()) {
-            return ConnectedObstacleGroup.empty();
-        }
-
-        if (inGroups.size() == 1) {
-            return inGroups.getFirst();
-        }
-
-        return inGroups.stream().reduce(ConnectedObstacleGroup::fuse).orElseThrow();
     }
 
 }

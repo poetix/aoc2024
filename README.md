@@ -1865,27 +1865,56 @@ private static Point findFirstBlockadingObstacleSlow(Iterator<Point> obstaclesIt
 
 If I'd just done that first I could have nabbed the second star super-quick, but for some reason I thought it would be unreasonably slow, so I set about finding a quicker way.
 
-Our path from the top left to the bottom right is blocked if there is any connected group of obstacles which runs from one edge of the map to another (unless it's left to bottom, or right to top, which don't bother us):
+Our path from the top left to the bottom right is blocked if there is any connected group of obstacles which runs from one edge of the map to another (unless it's left to bottom, or right to top, which don't bother us).
+
+Let's first define a `ConnectedRegion`, with a fast lookup for determining whether a point is connected to the other points in the region:
+
+```java
+public class ConnectedRegion {
+
+    private final SortedMap<Long, SortedSet<Long>> contents = new TreeMap<>();
+
+    public void add(Point point) {
+        ysAtX(point.x()).add(point.y());
+    }
+
+    public boolean isConnected(Point point) {
+        return contents.subMap(point.x() - 1, point.x() + 2).values().stream().anyMatch(ySet ->
+                !ySet.subSet(point.y() - 1, point.y() + 2).isEmpty());
+    }
+
+    public void merge(ConnectedRegion other) {
+        other.contents.forEach((x, ys) -> ys.forEach(ysAtX(x)::add));
+    }
+    
+    private SortedSet<Long> ysAtX(long x) {
+      return contents.computeIfAbsent(x, (ignored) -> new TreeSet<>());
+    }
+
+}
+```
+
+We can now use this to define a `ConnectedObstacleGroup`, which is a `ConnectedRegion` with some additional attributes (we track which edges of the map it's connected to):
 
 ```java
 record ConnectedObstacleGroup(
-        Set<Point> points,
+        ConnectedRegion points,
         boolean meetsLeftEdge,
         boolean meetsRightEdge,
         boolean meetsTopEdge,
         boolean meetsBottomEdge) {
 
   static ConnectedObstacleGroup empty() {
-    return new ConnectedObstacleGroup(new HashSet<>(),
+    return new ConnectedObstacleGroup(new ConnectedRegion(),
             false, false, false, false);
   }
 
   public boolean isConnectedTo(Point point) {
-    return Arrays.stream(Direction.values()).anyMatch(d -> points.contains(d.addTo(point)));
+    return points.isConnected(point);
   }
 
   public ConnectedObstacleGroup fuse(ConnectedObstacleGroup other) {
-    points.addAll(other.points());
+    points.merge(other.points);
     return new ConnectedObstacleGroup(points,
             meetsLeftEdge || other.meetsLeftEdge,
             meetsRightEdge || other.meetsRightEdge,
@@ -1917,16 +1946,14 @@ private static Point findFirstBlockadingObstacle(Collection<Point> obstacles) {
   Set<ConnectedObstacleGroup> connectedGroups = new HashSet<>();
 
   for (Point point : obstacles) {
-    List<ConnectedObstacleGroup> inGroups = new ArrayList<>();
+    List<ConnectedObstacleGroup> connectedToPoint = connectedGroups.stream()
+            .filter(group -> group.isConnectedTo(point))
+            .toList();
 
-    for (ConnectedObstacleGroup group : connectedGroups) {
-      if (group.isConnectedTo(point)) {
-        inGroups.add(group);
-      }
-    }
-
-    connectedGroups.removeAll(inGroups);
-    ConnectedObstacleGroup containingGroup = getContainingGroup(inGroups)
+    connectedToPoint.forEach(connectedGroups::remove);
+    ConnectedObstacleGroup containingGroup = connectedToPoint.stream()
+            .reduce(ConnectedObstacleGroup::fuse)
+            .orElseGet(ConnectedObstacleGroup::empty)
             .add(point);
     connectedGroups.add(containingGroup);
 
@@ -1934,19 +1961,8 @@ private static Point findFirstBlockadingObstacle(Collection<Point> obstacles) {
       return point;
     }
   }
+
   throw new IllegalStateException("No obstacle blockades the route");
-}
-
-private static ConnectedObstacleGroup getContainingGroup(List<ConnectedObstacleGroup> inGroups) {
-  if (inGroups.isEmpty()) {
-    return ConnectedObstacleGroup.empty();
-  }
-
-  if (inGroups.size() == 1) {
-    return inGroups.getFirst();
-  }
-  
-  return inGroups.stream().reduce(ConnectedObstacleGroup::fuse).orElseThrow();
 }
 ```
 
