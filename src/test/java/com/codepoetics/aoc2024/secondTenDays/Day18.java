@@ -1,7 +1,7 @@
 package com.codepoetics.aoc2024.secondTenDays;
 
 import com.codepoetics.aoc2024.graph.WeightedGraph;
-import com.codepoetics.aoc2024.grid.ConnectedRegion;
+import com.codepoetics.aoc2024.grid.Direction;
 import com.codepoetics.aoc2024.grid.Point;
 import com.codepoetics.aoc2024.parsing.ResourceReader;
 import org.junit.jupiter.api.Test;
@@ -10,29 +10,30 @@ import java.util.*;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class Day18 {
 
     record ConnectedObstacleGroup(
-            ConnectedRegion points,
+            Set<Point> points,
             boolean meetsLeftEdge,
             boolean meetsRightEdge,
             boolean meetsTopEdge,
             boolean meetsBottomEdge) {
 
         static ConnectedObstacleGroup empty() {
-            return new ConnectedObstacleGroup(new ConnectedRegion(),
+            return new ConnectedObstacleGroup(new HashSet<>(),
                     false, false, false, false);
         }
 
         public boolean isConnectedTo(Point point) {
-            return points.isConnected(point);
+            return Stream.of(Direction.values()).anyMatch(d -> points.contains(d.addTo(point)));
         }
 
         public ConnectedObstacleGroup fuse(ConnectedObstacleGroup other) {
-            points.merge(other.points);
+            points.addAll(other.points);
             return new ConnectedObstacleGroup(points,
                     meetsLeftEdge || other.meetsLeftEdge,
                     meetsRightEdge || other.meetsRightEdge,
