@@ -2024,7 +2024,7 @@ private List<Point> diamondOffsets(int size) {
             IntStream.range(-size, size + 1).boxed().map(y -> new Point(x, y)))
             .filter(p -> {
                 var distance = p.manhattanDistanceFrom(origin);
-                return 2 <=distance && distance <= size;
+                return 2 <= distance && distance <= size;
             }).toList();
 }
 ```
