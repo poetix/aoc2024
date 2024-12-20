@@ -43,11 +43,10 @@ public class Day18 {
             if (point.y() == 0) points.connect(topAnchor, point);
             if (point.y() == 70) points.connect(bottomAnchor, point);
 
-            Arrays.stream(Direction.values()).map(d -> d.addTo(point)).forEach(adjacent -> {
-                if (points.contains(adjacent)) {
-                    points.connect(point, adjacent);
-                }
-            });
+            Arrays.stream(Direction.values())
+                    .map(d -> d.addTo(point))
+                    .filter(points::contains)
+                    .forEach(adjacent -> points.connect(point, adjacent));
 
             return points.isConnected(leftAnchor, topAnchor)
                     || points.isConnected(leftAnchor, rightAnchor)

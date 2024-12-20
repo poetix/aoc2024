@@ -2018,25 +2018,24 @@ static final class ConnectedObstacleGroup {
 
         points.addAll(leftAnchor, rightAnchor, topAnchor, bottomAnchor);
     }
-    
+
     public boolean isBlockadeAfterAdding(Point point) {
-        points.add(point);
-
-        if (point.x() == 0) points.connect(leftAnchor, point);
-        if (point.x() == 70) points.connect(rightAnchor, point);
-        if (point.y() == 0) points.connect(topAnchor, point);
-        if (point.y() == 70) points.connect(bottomAnchor, point);
-
-        Arrays.stream(Direction.values()).map(d -> d.addTo(point)).forEach(adjacent -> {
-            if (points.contains(adjacent)) {
-                points.connect(point, adjacent);
-            }
-        });
-
-        return points.isConnected(leftAnchor, topAnchor)
-                || points.isConnected(leftAnchor, rightAnchor)
-                || points.isConnected(topAnchor, bottomAnchor)
-                || points.isConnected(rightAnchor, bottomAnchor);
+      points.add(point);
+  
+      if (point.x() == 0) points.connect(leftAnchor, point);
+      if (point.x() == 70) points.connect(rightAnchor, point);
+      if (point.y() == 0) points.connect(topAnchor, point);
+      if (point.y() == 70) points.connect(bottomAnchor, point);
+  
+      Arrays.stream(Direction.values())
+              .map(d -> d.addTo(point))
+              .filter(points::contains)
+              .forEach(adjacent -> points.connect(point, adjacent));
+  
+      return points.isConnected(leftAnchor, topAnchor)
+              || points.isConnected(leftAnchor, rightAnchor)
+              || points.isConnected(topAnchor, bottomAnchor)
+              || points.isConnected(rightAnchor, bottomAnchor);
     }
 }
 ```
