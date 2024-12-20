@@ -68,7 +68,7 @@ public class Day20 {
 
         private long cheatValue(Point start, Point end) {
             var beforeDistance = distanceMap.get(start);
-            var afterDistance = distanceMap.getOrDefault(end, Long.MAX_VALUE);
+            var afterDistance = distanceMap.get(end);
 
             var cost = end.manhattanDistanceFrom(start) - 1;
 
