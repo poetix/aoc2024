@@ -14,4 +14,8 @@ public record Point(long x, long y) {
     public Stream<Point> adjacents() {
         return Direction.nsew().map(d -> d.addTo(this));
     }
+
+    public long manhattanDistanceFrom(Point point) {
+        return Math.abs(x - point.x) + Math.abs(y - point.y);
+    }
 }

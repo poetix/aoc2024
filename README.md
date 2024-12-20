@@ -1944,3 +1944,110 @@ That runs in around 45ms on a warmed-up JVM.
 ## Day 19
 
 Induction (if we can make the rest of the pattern after matching the start, then we can make the whole thing) plus memoisation (keep track of how many ways there are to make each possible remainder) ftw. Should have got this one super-quick, as it's super-easy.
+
+There are two approaches we can take to the memoisation. One, which I favoured, is to stuff all the suffix scores in a `Map<String, Long>`, which also means you can re-use them from one item to the next. This is the cache-using, recursive version:
+
+```java
+private long countPossible(String checking) {
+    var knownCount = knownPossible.get(checking);
+    if (knownCount != null) return knownCount;
+
+    long possibleCount = 0L;
+    for (String subPattern : availablePatterns) {
+        if (subPattern.length() > checking.length()) break;
+
+        if (checking.startsWith(subPattern)) {
+            if (subPattern.length() == checking.length()) {
+                possibleCount += 1;
+                break;
+            }
+
+            var remainder = checking.substring(subPattern.length());
+            possibleCount += countPossible(remainder);
+        }
+    }
+
+    knownPossible.put(checking, possibleCount);
+    return possibleCount;
+}
+```
+
+(note that we can't just use `Map.computeIfAbsent` here because the function's recursion means we'll get a `ConcurrentModificationException`).
+
+The other approach is the dynamic programming approach, where we populate intermediate calculations into an array and work backwards from the end in such a way that "remainder" results are always available when we need them:
+
+```java
+private long countPossibleDynamic(String checking) {
+    for (int i = checking.length() - 1; i >= 0; i--) {
+        long count = 0;
+        long maxLength = checking.length() - i;
+        for (String subPattern: availablePatterns) {
+            if (checking.startsWith(subPattern, i)) {
+                count += subPattern.length() == maxLength
+                        ? 1
+                        : counts[i + subPattern.length()];
+            }
+        }
+        counts[i] = count;
+    }
+    return counts[0];
+}
+```
+
+(the array, `counts`, is pre-dimensioned to fit the largest of the strings we're examining). No recursion here - just a nested loop.
+
+I had a vague notion this might be faster then the other way, but it isn't noticeably. We have to do essentially the same number of calculations either way (we never have to re-do the count for any suffix, whichever approach we use). It just happens that the first way lets us re-use in later cases suffixes we already calculated in former ones.
+
+## Day 20
+
+This really is the year of Dijkstra!
+
+Given that we already know how to compute the complete distance map of distances from any point in the maze to the end, we can identify the value of any prospective cheat as the difference between the distances of the start and end positions, minus the cost in extra moves of warping from start to end:
+
+```java
+private long cheatValue(Point start, Point end) {
+    var beforeDistance = distanceMap.get(start);
+    var afterDistance = distanceMap.getOrDefault(end, Long.MAX_VALUE);
+
+    var cost = end.manhattanDistanceFrom(start) - 1;
+
+    return beforeDistance - (afterDistance + cost);
+}
+```
+
+Given an allowance _n_ of cheat moves, the cheat position offsets worth considering are those with a Manhattan distance of _2 <= distance <= n_. Let's pre-calculate those:
+
+```java
+private List<Point> diamondOffsets(int size) {
+    Point origin = new Point(0, 0);
+    return IntStream.range(-size, size + 1).boxed().flatMap(x ->
+            IntStream.range(-size, size + 1).boxed().map(y -> new Point(x, y)))
+            .filter(p -> {
+                var distance = p.manhattanDistanceFrom(origin);
+                return 2 <=distance && distance <= size;
+            }).toList();
+}
+```
+
+Now we run through the positions on the map for which we have distances calculate, look at all the offsets for each of those positions which are also on the map, calculate their cheat values and count up the ones with a cheat value of 100 or more:
+
+```java
+public long cheats(int diamondSize) {
+    var offsets = diamondOffsets(diamondSize);
+
+    return distanceMap.keySet().stream()
+            .mapToLong(before ->
+                offsets.stream()
+                        .map(before::plus)
+                        .filter(this::isOnPath)
+                        .filter(after -> cheatValue(before, after) >= 100)
+                        .count()
+            ).sum();
+}
+
+private boolean isOnPath(Point p) {
+    return distanceMap.getOrDefault(p, Long.MAX_VALUE) != Long.MAX_VALUE;
+}
+```
+
+That gives us all we need to solve parts 1 (with a diamond size of 2) and 2 (with a diamond size of 20).

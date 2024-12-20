@@ -29,10 +29,12 @@ public class Day19 {
         private final List<String> availablePatterns;
         private final List<String> requiredPatterns;
         private final Map<String, Long> knownPossible = new HashMap<>();
+        private final long[] counts;
 
         TowelSet(List<String> availablePatterns, List<String> requiredPatterns) {
             this.availablePatterns = availablePatterns;
             this.requiredPatterns = requiredPatterns;
+            counts = new long[requiredPatterns.stream().mapToInt(String::length).max().orElse(0)];
         }
 
         public long countPossible() {
@@ -41,10 +43,38 @@ public class Day19 {
                     .count();
         }
 
+        public long countPossibleDynamic() {
+            return requiredPatterns.stream()
+                    .filter(s -> countPossibleDynamic(s) > 0L)
+                    .count();
+        }
+
         public long totalPossible() {
             return requiredPatterns.stream()
                     .mapToLong(this::countPossible)
                     .sum();
+        }
+
+        public long totalPossibleDynamic() {
+            return requiredPatterns.stream()
+                    .mapToLong(this::countPossibleDynamic)
+                    .sum();
+        }
+
+        private long countPossibleDynamic(String checking) {
+            for (int i = checking.length() - 1; i >= 0; i--) {
+                long count = 0;
+                long maxLength = checking.length() - i;
+                for (String subPattern: availablePatterns) {
+                    if (checking.startsWith(subPattern, i)) {
+                        count += subPattern.length() == maxLength
+                                ? 1
+                                : counts[i + subPattern.length()];
+                    }
+                }
+                counts[i] = count;
+            }
+            return counts[0];
         }
 
         private long countPossible(String checking) {
@@ -92,8 +122,10 @@ public class Day19 {
 
     @Test
     public void part2() {
+        var set = TowelSet.of(ResourceReader.of("/day19.txt").readLines());
+
         assertEquals(615388132411142L,
-                TowelSet.of(ResourceReader.of("/day19.txt").readLines()).totalPossible());
+                    set.totalPossibleDynamic());
     }
 
     @Test
