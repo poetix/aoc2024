@@ -1941,6 +1941,120 @@ private static Point findFirstBlockadingObstacle(Collection<Point> obstacles) {
 
 That runs in around 45ms on a warmed-up JVM.
 
+## Day 18: Update
+
+A redditor kindly pointed out that my `ConnectedObstacleGroup` was potentially very inefficient (all the copying of set elements on fusion could be really costly), and I was directed to seek out the Disjoint Set data structure:
+
+```java
+public class DisjointSet<T> {
+
+    private static final int LESS_THAN = -1;
+    private static final int GREATER_THAN = 1;
+
+    private final Map<T, T> parents = new HashMap<>();
+    private final Map<T, Integer> ranks = new HashMap<>();
+
+    public void add(T element) {
+        parents.put(element, element);
+        ranks.put(element, 0);
+    }
+
+    @SafeVarargs
+    public final void addAll(T... elements) {
+        Arrays.stream(elements).forEach(this::add);
+    }
+
+    public void connect(T first, T second) {
+        T root1 = findRoot(first);
+        T root2 = findRoot(second);
+
+        if (root1.equals(root2)) return;
+
+        switch(Integer.compare(ranks.get(root1), ranks.get(root2))) {
+            case LESS_THAN -> parents.put(root1, root2);
+            case GREATER_THAN-> parents.put(root2, root1);
+            default -> {
+                parents.put(root2, root1);
+                ranks.put(root1, ranks.get(root1) + 1);
+            }
+        }
+    }
+
+    public boolean isConnected(T first, T second) {
+        return findRoot(first).equals(findRoot(second));
+    }
+
+    public boolean contains(T element) {
+        return parents.containsKey(element);
+    }
+
+    private T findRoot(T element) {
+        if (!parents.get(element).equals(element)) {
+            parents.put(element, findRoot(parents.get(element))); // Path compression: flatten the tree
+        }
+        return parents.get(element);
+    }
+}
+```
+
+This has the needed property that connections between elements are transitive: if A is connected to B, and B is connected to C, then A is connected to C. Our modified solution creates some "anchor" points representing each of the edges, to which any point on an edge is connected, and then tests for connections between anchor points:
+
+```java
+static final class ConnectedObstacleGroup {
+
+    private final DisjointSet<Point> points;
+    private final Point leftAnchor;
+    private final Point rightAnchor;
+    private final Point topAnchor;
+    private final Point bottomAnchor;
+
+    ConnectedObstacleGroup() {
+        points = new DisjointSet<>();
+
+        leftAnchor = new Point(-1, 0);
+        rightAnchor = new Point(71, 0);
+        topAnchor = new Point(0, -1);
+        bottomAnchor = new Point(0, 71);
+
+        points.addAll(leftAnchor, rightAnchor, topAnchor, bottomAnchor);
+    }
+    
+    public boolean isBlockadeAfterAdding(Point point) {
+        points.add(point);
+
+        if (point.x() == 0) points.connect(leftAnchor, point);
+        if (point.x() == 70) points.connect(rightAnchor, point);
+        if (point.y() == 0) points.connect(topAnchor, point);
+        if (point.y() == 70) points.connect(bottomAnchor, point);
+
+        Arrays.stream(Direction.values()).map(d -> d.addTo(point)).forEach(adjacent -> {
+            if (points.contains(adjacent)) {
+                points.connect(point, adjacent);
+            }
+        });
+
+        return points.isConnected(leftAnchor, topAnchor)
+                || points.isConnected(leftAnchor, rightAnchor)
+                || points.isConnected(topAnchor, bottomAnchor)
+                || points.isConnected(rightAnchor, bottomAnchor);
+    }
+}
+```
+
+Our part 2 solver is now a simple "feed these values to this consumer until it returns true" loop:
+
+```java
+private static Point findFirstBlockadingObstacle(Collection<Point> obstacles) {
+    ConnectedObstacleGroup connectedObstacles = new ConnectedObstacleGroup();
+    return obstacles.stream()
+            .filter(connectedObstacles::isBlockadeAfterAdding)
+            .findFirst()
+            .orElseThrow();
+}
+```
+
+I don't particularly like that we're updating the state of `connectedObstacles` inside `filter`, which ought really to be a pure function, but there isn't a haltable `forEach` or `reduce` on Java's `Stream`. I suppose I could always have written a `for`-loop instead.
+
 ## Day 19
 
 Induction (if we can make the rest of the pattern after matching the start, then we can make the whole thing) plus memoisation (keep track of how many ways there are to make each possible remainder) ftw. Should have got this one super-quick, as it's super-easy.

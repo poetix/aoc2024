@@ -1,5 +1,6 @@
 package com.codepoetics.aoc2024.secondTenDays;
 
+import com.codepoetics.aoc2024.data.DisjointSet;
 import com.codepoetics.aoc2024.graph.WeightedGraph;
 import com.codepoetics.aoc2024.grid.Direction;
 import com.codepoetics.aoc2024.grid.Point;
@@ -10,50 +11,48 @@ import java.util.*;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
-import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class Day18 {
 
-    record ConnectedObstacleGroup(
-            Set<Point> points,
-            boolean meetsLeftEdge,
-            boolean meetsRightEdge,
-            boolean meetsTopEdge,
-            boolean meetsBottomEdge) {
+    static final class ConnectedObstacleGroup {
 
-        static ConnectedObstacleGroup empty() {
-            return new ConnectedObstacleGroup(new HashSet<>(),
-                    false, false, false, false);
+        private final DisjointSet<Point> points;
+        private final Point leftAnchor;
+        private final Point rightAnchor;
+        private final Point topAnchor;
+        private final Point bottomAnchor;
+
+        ConnectedObstacleGroup() {
+            points = new DisjointSet<>();
+
+            leftAnchor = new Point(-1, 0);
+            rightAnchor = new Point(71, 0);
+            topAnchor = new Point(0, -1);
+            bottomAnchor = new Point(0, 71);
+
+            points.addAll(leftAnchor, rightAnchor, topAnchor, bottomAnchor);
         }
 
-        public boolean isConnectedTo(Point point) {
-            return Stream.of(Direction.values()).anyMatch(d -> points.contains(d.addTo(point)));
-        }
+        public boolean isBlockadeAfterAdding(Point point) {
+            points.add(point);
 
-        public ConnectedObstacleGroup fuse(ConnectedObstacleGroup other) {
-            points.addAll(other.points);
-            return new ConnectedObstacleGroup(points,
-                    meetsLeftEdge || other.meetsLeftEdge,
-                    meetsRightEdge || other.meetsRightEdge,
-                    meetsTopEdge || other.meetsTopEdge,
-                    meetsBottomEdge || other.meetsBottomEdge);
-        }
+            if (point.x() == 0) points.connect(leftAnchor, point);
+            if (point.x() == 70) points.connect(rightAnchor, point);
+            if (point.y() == 0) points.connect(topAnchor, point);
+            if (point.y() == 70) points.connect(bottomAnchor, point);
 
-        public boolean isBlockade() {
-            return (meetsLeftEdge && (meetsTopEdge || meetsRightEdge))
-                    || (meetsTopEdge && meetsBottomEdge)
-                    || (meetsBottomEdge && meetsRightEdge);
-        }
+            Arrays.stream(Direction.values()).map(d -> d.addTo(point)).forEach(adjacent -> {
+                if (points.contains(adjacent)) {
+                    points.connect(point, adjacent);
+                }
+            });
 
-        public ConnectedObstacleGroup add(Point p) {
-            points.add(p);
-            return new ConnectedObstacleGroup(points,
-                    meetsLeftEdge || (p.x() == 0 && p.y() > 0),
-                    meetsRightEdge || (p.x() == 70),
-                    meetsTopEdge || (p.y() == 0 && p.x() > 0),
-                    meetsBottomEdge || p.y() == 70 && p.x() < 70);
+            return points.isConnected(leftAnchor, topAnchor)
+                    || points.isConnected(leftAnchor, rightAnchor)
+                    || points.isConnected(topAnchor, bottomAnchor)
+                    || points.isConnected(rightAnchor, bottomAnchor);
         }
     }
 
@@ -83,9 +82,9 @@ public class Day18 {
                         .mapToObj(y -> new Point(x, y))
                         .filter(isUnobstructed)
         ).forEach(unobstructed ->
-            unobstructed.adjacents()
-                    .filter(isUnobstructed)
-                    .forEach(adjacent -> graph.add(unobstructed, adjacent, 1))
+                unobstructed.adjacents()
+                        .filter(isUnobstructed)
+                        .forEach(adjacent -> graph.add(unobstructed, adjacent, 1))
         );
 
         var distances = graph.distanceMap(new Point(0, 0)).distances();
@@ -117,26 +116,11 @@ public class Day18 {
     }
 
     private static Point findFirstBlockadingObstacle(Collection<Point> obstacles) {
-        Set<ConnectedObstacleGroup> connectedGroups = new HashSet<>();
-
-        for (Point point : obstacles) {
-            List<ConnectedObstacleGroup> connectedToPoint = connectedGroups.stream()
-                    .filter(group -> group.isConnectedTo(point))
-                    .toList();
-
-            connectedToPoint.forEach(connectedGroups::remove);
-            ConnectedObstacleGroup containingGroup = connectedToPoint.stream()
-                    .reduce(ConnectedObstacleGroup::fuse)
-                    .orElseGet(ConnectedObstacleGroup::empty)
-                    .add(point);
-            connectedGroups.add(containingGroup);
-
-            if (containingGroup.isBlockade()) {
-                return point;
-            }
-        }
-
-        throw new IllegalStateException("No obstacle blockades the route");
+        ConnectedObstacleGroup connectedObstacles = new ConnectedObstacleGroup();
+        return obstacles.stream()
+                .filter(connectedObstacles::isBlockadeAfterAdding)
+                .findFirst()
+                .orElseThrow();
     }
 
 }
