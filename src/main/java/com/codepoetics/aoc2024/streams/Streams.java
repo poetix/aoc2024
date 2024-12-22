@@ -1,14 +1,9 @@
 package com.codepoetics.aoc2024.streams;
 
-import java.util.Iterator;
-import java.util.List;
-import java.util.Spliterator;
-import java.util.Spliterators;
-import java.util.function.BiFunction;
-import java.util.function.Function;
-import java.util.function.Predicate;
-import java.util.function.ToIntBiFunction;
+import java.util.*;
+import java.util.function.*;
 import java.util.stream.IntStream;
+import java.util.stream.LongStream;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
@@ -75,5 +70,66 @@ public final class Streams {
         return StreamSupport.stream(
                 Spliterators.spliterator(iter, Integer.MAX_VALUE,
                         Spliterator.NONNULL | Spliterator.IMMUTABLE), false);
+    }
+
+    public static Stream<LongStream> windowed(int size, LongStream source) {
+        long[] window = new long[size];
+        var sourceSpliterator = source.spliterator();
+
+        var spliterator = new Spliterator<LongStream>() {
+
+            private int ptr = 0;
+            private boolean isFull;
+
+            private void accept(long next) {
+                window[ptr++] = next;
+                if (ptr == size) {
+                    ptr = 0;
+                    isFull = true;
+                }
+            }
+
+            @Override
+            public boolean tryAdvance(Consumer<? super LongStream> action) {
+                if (!isFull) {
+                    while (!isFull) {
+                        if (!sourceSpliterator.tryAdvance((LongConsumer) this::accept)) return false;
+                    }
+                    action.accept(Arrays.stream(window));
+                    return true;
+                }
+
+                if (!sourceSpliterator.tryAdvance((LongConsumer) this::accept)) return false;
+                action.accept(IntStream.range(0, size).mapToLong(i -> window[(ptr + i) % size]));
+                return true;
+            }
+
+            @Override
+            public Spliterator<LongStream> trySplit() {
+                return null;
+            }
+
+            @Override
+            public long estimateSize() {
+                var sourceSize = sourceSpliterator.estimateSize();
+                return sourceSize == Long.MAX_VALUE
+                        ? Long.MAX_VALUE
+                        : sourceSize - size;
+            }
+
+            @Override
+            public int characteristics() {
+                return sourceSpliterator.characteristics();
+            }
+        };
+
+        return StreamSupport.stream(spliterator, false);
+    }
+
+    public static LongStream deltas(LongStream source) {
+        return windowed(2, source).mapToLong(window -> {
+            var arr = window.toArray();
+            return arr[1] - arr[0];
+        });
     }
 }

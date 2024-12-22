@@ -49,4 +49,9 @@ public record SparseGrid<T>(
     public T get(Point position) {
         return contents.get(position);
     }
+
+    @Override
+    public boolean contains(Point position) {
+        return contents.containsKey(position);
+    }
 }

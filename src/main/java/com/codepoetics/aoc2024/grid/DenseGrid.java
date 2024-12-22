@@ -55,4 +55,8 @@ public record DenseGrid<T>(T[][] grid) implements Grid<T> {
     public int height() {
         return grid.length;
     }
+
+    public boolean contains(Point position) {
+        return get(position) != null;
+    }
 }

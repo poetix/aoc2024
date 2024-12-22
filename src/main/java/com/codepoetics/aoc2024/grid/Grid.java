@@ -7,6 +7,8 @@ import java.util.stream.Stream;
 
 public interface Grid<T> {
 
+    boolean contains(Point point);
+
     record Square<T>(Point position, T contents) {}
 
     Stream<Point> populatedPositions();

@@ -2164,3 +2164,85 @@ private boolean isOnPath(Point p) {
 ```
 
 That gives us all we need to solve parts 1 (with a diamond size of 2) and 2 (with a diamond size of 20).
+
+## Day 21
+
+Sometimes there's a puzzle where the answer has a pleasing quality of obviousness once arrived at, but getting there involved navigating dense thickets of confusion. Today's was one of those.
+
+After a lot of fruitless hacking about with bits that were _nearly_ right, I found an abstraction that worked well enough for me to feel I understood just what I was doing with it. A `Keypad` holds an optional reference to a downstream `Keypad`, and when evaluating the cost of a path calls upon its downstream `Keypad`, if there is one, to advise it on how much work there is to be done to enter that path on itself. In this way, we can cascade path fragments along the chain to be costed, without getting into combinatorial explosion.
+
+Here's the signature of `Keypad`:
+
+``java
+record Keypad(
+  Map<Character, Map<Character, Set<String>>> keyPaths,
+  Map<Character, Map<Character, Long>> pathCostCache,
+  Keypad upstream)
+``
+
+* `keyPaths` records all the shortest paths between any pair of keys on the keypad.
+* `pathCostCache` is a cache mapping pairs of keys on the keypad to their minimum costs in end-user keystrokes, as calculated by the keypad next in line to the user.
+* `upstream` is the next keypad in line, or null if it's the user rather than a robot operating _this_ keypad.
+
+The cost of a path, according to a keypad, is the sum of the minimum cost of all the movements from one key to another along that path:
+
+```java
+public long pathCost(String path) {
+    char prev = 'A';
+    long total = 0L;
+    for (char next : path.toCharArray()) {
+        total += minCost(prev, next);
+        prev = next;
+    }
+    return total;
+}
+```
+
+How do we work out the minimum cost? Like this:
+
+```java
+private long minCost(char start, char end) {
+    return pathCostCache.computeIfAbsent(start, ignored -> new HashMap<>())
+            .computeIfAbsent(end, ignored ->
+        keyPaths.get(start).get(end).stream()
+                .mapToLong(this::upstreamPathCost)
+                .min().orElseThrow()
+    );
+}
+
+private long upstreamPathCost(String path) {
+    return upstream == null ? path.length() : upstream.pathCost(path);
+}
+```
+
+Believe it or not, that's the whole of the really _difficult_ bit of the algorithm. To find the `minCost` for any pair of keys, we find all the possible paths between them, ask the upstream keypad to score them, and return the lowest score. And we cache it, so as not to have to ask again.
+
+This puzzle is mentally challenging, I think, because you have to keep track of multiple "levels" of path scoring simultaneously. Separating them out using classes and being explicit about how information flows up and down the chain _really_ helps to make sense of it. In this approach we also get multi-level caching - basically, "remember how much it costs to do this if you're the _n_th robot in line" - which has an immense impact on performance.
+
+## Day 22
+
+Having attempted something very cache-heavy that ran like a dog, I tried it in raw "number-crunching goes brrr" mode and it seemed much happier. It's easier than it looks.
+
+I turned this into an exercise in using infinite streams, windowing them and calculating deltas within a five-element window to get patterns. It's not that deep, but it's quite pretty:
+
+```java
+private void observeBestPrices(long seed, Map<String, Long> scores) {
+    Set<String> observed = new HashSet<>();
+
+    Streams.windowed(5, randomsFromSeed(seed).limit(2000).map(l -> l % 10))
+            .forEach(window -> {
+                var asArray = window.toArray();
+                var priceAfterPattern = asArray[4];
+                var pattern = Streams.deltas(Arrays.stream(asArray))
+                        .mapToObj(Long::toString)
+                        .collect(Collectors.joining(","));
+
+                if (observed.add(pattern)) {
+                    scores.compute(pattern, (ignored, totalScore) ->
+                            totalScore == null ? priceAfterPattern : totalScore + priceAfterPattern);
+                }
+            });
+}
+```
+
+It's a bit clunky - around 2.5 seconds to run without warm-up - and I can't see a way to get to a sub-second implementation, but perhaps I'm missing something.
