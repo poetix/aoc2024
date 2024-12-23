@@ -3,6 +3,8 @@ package com.codepoetics.aoc2024.data;
 import com.codepoetics.aoc2024.streams.Streams;
 
 import java.util.Arrays;
+import java.util.Collection;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
@@ -18,6 +20,10 @@ public sealed interface Lst<T> permits Lst.Empty, Lst.Cons {
     @SafeVarargs
     static <T> Lst<T> of(T...items) {
         return of(Arrays.stream(items));
+    }
+
+    static <T> Lst<T> of(Collection<T> items) {
+        return of(items.stream());
     }
 
     static <T> Lst<T> of(Stream<T> items) {

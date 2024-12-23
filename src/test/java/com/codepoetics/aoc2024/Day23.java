@@ -43,7 +43,7 @@ public class Day23 {
         }
 
         public Lst<String> maximalClique() {
-            return maxBronKerbosch(Lst.empty(), Lst.of(connections.keySet().stream()), Lst.empty());
+            return maxBronKerbosch(Lst.empty(), Lst.of(connections.keySet()), Lst.empty());
         }
 
         private Lst<String> maxBronKerbosch(Lst<String> r, Lst<String> p, Lst<String> x) {
@@ -72,7 +72,7 @@ public class Day23 {
 
     }
     @Test
-    public void part1() {
+    public void bothParts() {
         var network = Network.of(ResourceReader.of("/day23.txt").readLines());
 
         var part1 = network.groupsOfThree()
