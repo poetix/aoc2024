@@ -2301,6 +2301,7 @@ private Lst<String> maxBronKerbosch(Lst<String> r, Lst<String> p, Lst<String> x)
       var candidate = maxBronKerbosch(r.add(v), intersect(p, neighbours), intersect(x, neighbours));
       if (candidate.size() > max.size()) max = candidate;
     }
+    
     p = p.tail();
     x = x.add(v);
   }
@@ -2315,4 +2316,4 @@ private Lst<String> intersect(Lst<String> a, Set<String> neighbours) {
 
 I missed an easy win here, originally writing this to return _all_ maximal cliques and then searching them for the largest, when actually we can fold the search for the largest into the recursion on Bron-Kerbosch and avoid having to build up and traverse a collection of candidate values.
 
-A nice side-effect of having everything sorted to begin with: we don't have to do a final sort on the vertices returned in the largest maximal clique to get our puzzle answer. It's much faster that way.
+A nice side-effect of having everything sorted to begin with: we don't have to do a final sort on the vertices returned in the largest maximal clique to get our puzzle answer.

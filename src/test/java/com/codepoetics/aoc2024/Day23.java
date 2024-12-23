@@ -65,6 +65,7 @@ public class Day23 {
                     var candidate = maxBronKerbosch(r.add(v), intersect(p, neighbours), intersect(x, neighbours));
                     if (candidate.size() > max.size()) max = candidate;
                 }
+                
                 p = p.tail();
                 x = x.add(v);
             }
