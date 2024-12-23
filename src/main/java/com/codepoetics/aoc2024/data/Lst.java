@@ -4,6 +4,7 @@ import com.codepoetics.aoc2024.streams.Streams;
 
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Predicate;
 import java.util.stream.Stream;
 
 public sealed interface Lst<T> permits Lst.Empty, Lst.Cons {
@@ -35,6 +36,13 @@ public sealed interface Lst<T> permits Lst.Empty, Lst.Cons {
         AtomicReference<Lst<T>> result = new AtomicReference<>(Lst.empty());
         stream().forEach(value -> result.set(result.get().add(value)));
         return result.get();
+    }
+
+    default Lst<T> filter(Predicate<T> filter) {
+        if (isEmpty()) return this;
+        return filter.test(head())
+            ? tail().filter(filter).add(head())
+            : tail().filter(filter);
     }
 
     record Empty<T>() implements Lst<T> {

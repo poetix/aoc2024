@@ -3,6 +3,9 @@ package com.codepoetics.aoc2024.data;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class DisjointSet<T> {
 
@@ -13,8 +16,8 @@ public class DisjointSet<T> {
     private final Map<T, Integer> ranks = new HashMap<>();
 
     public void add(T element) {
-        parents.put(element, element);
-        ranks.put(element, 0);
+        parents.putIfAbsent(element, element);
+        ranks.putIfAbsent(element, 0);
     }
 
     @SafeVarargs
@@ -51,5 +54,17 @@ public class DisjointSet<T> {
             parents.put(element, findRoot(parents.get(element))); // Path compression: flatten the tree
         }
         return parents.get(element);
+    }
+
+    public Stream<Set<T>> findGroups() {
+        return parents.entrySet().stream().collect(
+                Collectors.groupingBy(
+                        e -> findRoot(e.getValue()),
+                        Collectors.mapping(Map.Entry::getKey, Collectors.toSet()))
+        ).values().stream();
+    }
+
+    public int elementCount() {
+        return parents.size();
     }
 }

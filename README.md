@@ -2246,3 +2246,67 @@ private void observeBestPrices(long seed, Map<String, Long> scores) {
 ```
 
 It's a bit clunky - around 2.5 seconds to run without warm-up - and I can't see a way to get to a sub-second implementation, but perhaps I'm missing something.
+
+## Day 23
+
+An opportunity to meet a new algorithm, in this case [Bron-Kerbosch](https://en.wikipedia.org/wiki/Bron%E2%80%93Kerbosch_algorithm), which finds the maximal cliques (subgraphs of vertices which are all directly connected to one another) in a graph.
+
+Our graph is represented by an ordered map of vertices to ordered sets of neighbours:
+
+```java
+private final SortedMap<String, SortedSet<String>> connections = new TreeMap<>();
+```
+
+This means that part 1 can make cute use of `SortedSet`'s ability to provide a view of a subset starting on a certain key:
+
+```java
+public Stream<List<String>> groupsOfThree() {
+  return connections.entrySet().stream().flatMap(e -> {
+    var a = e.getKey();
+    var neighbours = e.getValue();
+
+    return neighbours.subSet(a + "z", "zzz").stream().flatMap(b ->
+            connections.get(b).subSet(b + "z", "zzz").stream()
+                    .filter(neighbours::contains)
+                    .map(c -> List.of(a, b, c)));
+  });
+}
+```
+
+That is, assuming that the keys in `connections` are ordered, we get the neighbours of each key `a` in order starting after `a`, and the neighbours of each key `b` of those neighbours in order starting after `b`, testing that each neighbour `c` of those neighbours is also a neighbour of `a`.
+
+That's nice, and quite fast, but we cannot easily generalise it to find the largest maximal clique. For this we use Bron-Kerbosch, as follows:
+
+```java
+public Lst<String> maximalClique() {
+    return maxBronKerbosch(Lst.empty(), Lst.of(connections.keySet().stream()), Lst.empty());
+}
+
+private Lst<String> maxBronKerbosch(Lst<String> r, Lst<String> p, Lst<String> x) {
+    if (p.isEmpty() && x.isEmpty()) {
+        return r;
+    }
+
+    Lst<String> max = Lst.empty();
+    while (!p.isEmpty()) {
+        var v = p.head();
+        var neighbours = connections.get(v);
+
+        var candidate = maxBronKerbosch(r.add(v), intersect(p, neighbours), intersect(x, neighbours));
+        if (candidate.size() > max.size()) max = candidate;
+
+        p = p.tail();
+        x = x.add(v);
+    }
+
+    return max;
+}
+
+private Lst<String> intersect(Lst<String> a, Set<String> neighbours) {
+    return a.filter(neighbours::contains);
+}
+```
+
+I missed an easy win here, originally writing this to return _all_ maximal cliques and then searching them for the largest, when actually we can fold the search for the largest into the recursion on Bron-Kerbosch and avoid having to build up and traverse a collection of candidate values.
+
+A nice side-effect of having everything sorted to begin with: we don't have to do a final sort on the vertices returned in the largest maximal clique to get our puzzle answer. It's much faster that way.
