@@ -5,7 +5,6 @@ import com.codepoetics.aoc2024.parsing.ResourceReader;
 import org.junit.jupiter.api.Test;
 
 import java.util.*;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -44,6 +43,22 @@ public class Day23 {
 
         public Lst<String> maximalClique() {
             return maxBronKerbosch(Lst.empty(), Lst.of(connections.keySet()), Lst.empty());
+        }
+
+        public List<String> maximalClique2() {
+            var cliques = connections.keySet().stream().map(s -> {
+                List<String> clique =  new ArrayList<>();
+                clique.add(s);
+                return clique;
+            }).toList();
+
+            return cliques.stream().peek(clique ->
+                connections.forEach((node, neighbours) -> {
+                    if (neighbours.containsAll(clique)) {
+                        clique.add(node);
+                    }
+                })
+            ).max(Comparator.comparing(List::size)).orElseThrow();
         }
 
         private Lst<String> maxBronKerbosch(Lst<String> r, Lst<String> p, Lst<String> x) {
@@ -87,9 +102,8 @@ public class Day23 {
                         .count();
         assertEquals(1077L, part1);
 
-        var largest = network.maximalClique();
         assertEquals("bc,bf,do,dw,dx,ll,ol,qd,sc,ua,xc,yu,zt",
-                largest.stream().collect(Collectors.joining(",")));
+                String.join(",", network.maximalClique2()));
     }
 
 
