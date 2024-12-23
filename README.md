@@ -2279,7 +2279,7 @@ That's nice, and quite fast, but we cannot easily generalise it to find the larg
 
 ```java
 public Lst<String> maximalClique() {
-  return maxBronKerbosch(Lst.empty(), Lst.of(connections.keySet().stream()), Lst.empty());
+  return maxBronKerbosch(Lst.empty(), Lst.of(connections.keySet()), Lst.empty());
 }
 
 private Lst<String> maxBronKerbosch(Lst<String> r, Lst<String> p, Lst<String> x) {
