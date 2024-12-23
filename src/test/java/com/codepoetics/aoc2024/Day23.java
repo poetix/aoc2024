@@ -52,13 +52,19 @@ public class Day23 {
             }
 
             Lst<String> max = Lst.empty();
+            var pivot = Stream.concat(p.stream(), x.stream()).max(Comparator.comparing(v ->
+                    connections.get(v).size())).orElseThrow();
+            var pivotNeighbours = connections.get(pivot);
+
             while (!p.isEmpty()) {
                 var v = p.head();
-                var neighbours = connections.get(v);
 
-                var candidate = maxBronKerbosch(r.add(v), intersect(p, neighbours), intersect(x, neighbours));
-                if (candidate.size() > max.size()) max = candidate;
+                if (!pivotNeighbours.contains(v)) {
+                    var neighbours = connections.get(v);
 
+                    var candidate = maxBronKerbosch(r.add(v), intersect(p, neighbours), intersect(x, neighbours));
+                    if (candidate.size() > max.size()) max = candidate;
+                }
                 p = p.tail();
                 x = x.add(v);
             }
